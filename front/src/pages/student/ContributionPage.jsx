@@ -37,7 +37,7 @@ export default function ContributionPage() {
     };
 
     try {
-      const response = await fetch("http://localhost:5000/api/contributions/submit", {
+      const response = await fetch("api/contributions/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)

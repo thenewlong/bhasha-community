@@ -33,7 +33,7 @@ export default function ModeratorPage() {
     setLoading(true);
     setError("");
     try {
-      const response = await fetch("http://localhost:5000/api/moderator/pending");
+      const response = await fetch("api/moderator/pending");
       const result = await response.json();
 
       if (response.ok && result.success) {
@@ -64,7 +64,7 @@ export default function ModeratorPage() {
 
     setActionLoading(true);
     try {
-      const response = await fetch(`http://localhost:5000/api/moderator/review/${wordItem.id}`, {
+      const response = await fetch(`api/moderator/review/${wordItem.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
