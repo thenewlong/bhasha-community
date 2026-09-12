@@ -9,106 +9,86 @@ import {
   Pencil, 
   X, 
   Loader2,
-  CheckCircle2
+  ShieldCheck,
+  LogOut,
+  Filter
 } from "lucide-react";
 
 export default function ModeratorPage() {
-  const { currentUser } = useAuth();
+  const { currentUser, logout } = useAuth();
 
-  // Active Tab State: 'Most used' | 'Average used' | 'Rare used'
+  // Clustering & Status Filter States
   const [activeTab, setActiveTab] = useState("Most used");
-  
-  // Data States from PostgreSQL Backend
-  const [pendingWords, setPendingWords] = useState([]);
+  const [statusFilter, setStatusFilter] = useState("all");
+
+  // Backend Data States (PostgreSQL)
+  const [wordsList, setWordsList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // Modal States for Edit & Read
+  // Modal States
   const [selectedWord, setSelectedWord] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
-  // 1. READ: Fetch Live Pending Words from PostgreSQL
-  const fetchPendingWords = async () => {
+  // 1. Fetch Words Data from Backend API
+  const fetchWords = async () => {
     setLoading(true);
     setError("");
     try {
-      const response = await fetch("api/moderator/pending");
+      const response = await fetch("/api/moderator/pending");
       const result = await response.json();
 
       if (response.ok && result.success) {
-        setPendingWords(result.data || []);
+        setWordsList(result.data || []);
       } else {
-        throw new Error(result.message || "Failed to fetch pending words.");
+        // Fallback for general words endpoint
+        const fallbackRes = await fetch("/api/words");
+        const fallbackResult = await fallbackRes.json();
+        if (fallbackRes.ok && fallbackResult.success) {
+          setWordsList(fallbackResult.data || []);
+        } else {
+          setWordsList([]);
+        }
       }
     } catch (err) {
-      console.error("Error fetching moderator data:", err);
-      setError("Unable to connect to database server.");
+      console.error("Fetch error:", err);
+      setError("Failed to load records. Please check backend connectivity.");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchPendingWords();
+    fetchWords();
   }, []);
 
-  // Category ke hisab se filter
-  const filteredWords = pendingWords.filter(
-    (item) => item.clustering?.toLowerCase() === activeTab.toLowerCase()
-  );
+  // Filter List according to Active Tab (Clustering) & Status Filter
+  const filteredWords = wordsList.filter((item) => {
+    const clusterMatch = (item.clustering || "").trim().toLowerCase() === activeTab.trim().toLowerCase();
+    const statusMatch = statusFilter === "all" || (item.status || "").toLowerCase() === statusFilter.toLowerCase();
+    return clusterMatch && statusMatch;
+  });
 
-  // 2. WRITE: Approve Word Direct (Status = Approved -> Admin Dashboard Me Jayega)
-  const handleApprove = async (wordItem) => {
-    if (!window.confirm(`Approve "${wordItem.kokborok_word}" and send to Admin?`)) return;
-
-    setActionLoading(true);
-    try {
-      const response = await fetch(`api/moderator/review/${wordItem.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...wordItem,
-          status: "approved" // Move to Admin
-        })
-      });
-
-      if (response.ok) {
-        setPendingWords((prev) => prev.filter((item) => item.id !== wordItem.id));
-        alert("Word approved and sent to Admin Dashboard successfully!");
-      } else {
-        alert("Failed to approve word.");
-      }
-    } catch (err) {
-      alert("Error connecting to server.");
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  // 3. WRITE: Edit Details & Save (Auto Approve to Admin)
+  // 2. Moderator Save Edit Action (Only Edit & Save feature)
   const handleSaveEdit = async (e) => {
     e.preventDefault();
     setActionLoading(true);
 
     try {
-      const response = await fetch(`api/moderator/review/${selectedWord.id}`, {
+      const response = await fetch(`/api/moderator/update/${selectedWord.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          kokborok_word: selectedWord.kokborok_word,
-          english_word: selectedWord.english_word,
-          hindi_word: selectedWord.hindi_word,
-          bangali_word: selectedWord.bangali_word,
-          clustering: selectedWord.clustering,
-          status: "approved" // Update & Move to Admin
-        })
+        body: JSON.stringify(selectedWord)
       });
 
       if (response.ok) {
-        setPendingWords((prev) => prev.filter((item) => item.id !== selectedWord.id));
+        setWordsList((prev) =>
+          prev.map((item) => (item.id === selectedWord.id ? selectedWord : item))
+        );
         setIsEditModalOpen(false);
-        alert("Word edited and approved successfully!");
+        alert("Word edited and saved successfully!");
       } else {
         alert("Failed to update word.");
       }
@@ -138,29 +118,52 @@ export default function ModeratorPage() {
           </button>
         </div>
 
-        <h1 style={{ fontSize: "22px", fontWeight: "700", color: "#0F172A", margin: 0, letterSpacing: "-0.3px" }}>
-          Moderators
+        <h1 style={{ fontSize: "20px", fontWeight: "700", color: "#0F172A", margin: 0, letterSpacing: "-0.3px" }}>
+          Moderator Dashboard
         </h1>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <div style={{
-            width: "36px",
-            height: "36px",
-            borderRadius: "50%",
-            backgroundColor: "#CBD5E1",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center"
-          }}>
-            <Users size={20} color="#475569" />
-          </div>
-          <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: "13px", fontWeight: "600", color: "#1E293B" }}>
-              {currentUser?.email || "johndebbarma23@gmail.com"}
+        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            <div style={{
+              width: "36px",
+              height: "36px",
+              borderRadius: "50%",
+              backgroundColor: "#059669",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center"
+            }}>
+              <ShieldCheck size={20} color="#FFFFFF" />
             </div>
-            <div style={{ fontSize: "11px", color: "#64748B" }}>Moderator (Read/Write)</div>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: "13px", fontWeight: "600", color: "#1E293B" }}>
+                {currentUser?.email || "moderator@gmail.com"}
+              </div>
+              <div style={{ fontSize: "11px", color: "#059669", fontWeight: "600" }}>Moderator</div>
+            </div>
+            <ChevronDown size={16} color="#64748B" />
           </div>
-          <ChevronDown size={16} color="#64748B" />
+
+          <button
+            onClick={logout}
+            title="Logout"
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "6px",
+              backgroundColor: "#FEF2F2",
+              color: "#DC2626",
+              border: "1px solid #FCA5A5",
+              padding: "6px 12px",
+              borderRadius: "8px",
+              fontSize: "13px",
+              fontWeight: "600",
+              cursor: "pointer"
+            }}
+          >
+            <LogOut size={15} />
+            Logout
+          </button>
         </div>
       </header>
 
@@ -182,9 +185,9 @@ export default function ModeratorPage() {
             width: "42px",
             height: "42px",
             borderRadius: "10px",
-            backgroundColor: "#EFF6FF",
+            backgroundColor: "#ECFDF5",
             border: "none",
-            color: "#2563EB",
+            color: "#059669",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -210,8 +213,9 @@ export default function ModeratorPage() {
         </aside>
 
         {/* MAIN CONTENT AREA */}
-        <main style={{ flex: 1, padding: "28px" }}>
+        <main style={{ flex: 1, padding: "28px", maxWidth: "1280px", margin: "0 auto", width: "100%" }}>
           
+          {/* WORDS MANAGEMENT TABLE */}
           <div style={{
             backgroundColor: "#FFFFFF",
             borderRadius: "16px",
@@ -220,10 +224,34 @@ export default function ModeratorPage() {
             boxShadow: "0 1px 3px rgba(0,0,0,0.02)"
           }}>
             
-            {/* CARD TITLE */}
-            <h2 style={{ fontSize: "18px", fontWeight: "700", color: "#1E293B", marginTop: 0, marginBottom: "20px" }}>
-              Clustering
-            </h2>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexWrap: "wrap", gap: "12px" }}>
+              <h2 style={{ fontSize: "18px", fontWeight: "700", color: "#1E293B", margin: 0 }}>
+                Content Review & Editing
+              </h2>
+
+              {/* Status Filter Dropdown */}
+              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <Filter size={16} color="#64748B" />
+                <span style={{ fontSize: "13px", fontWeight: "600", color: "#475569" }}>Status:</span>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  style={{
+                    padding: "6px 12px",
+                    borderRadius: "8px",
+                    border: "1px solid #CBD5E1",
+                    fontSize: "13px",
+                    fontWeight: "500",
+                    outline: "none"
+                  }}
+                >
+                  <option value="all">All Status</option>
+                  <option value="pending">Pending</option>
+                  <option value="approved">Approved</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+              </div>
+            </div>
 
             {/* CATEGORY TABS */}
             <div style={{
@@ -250,31 +278,31 @@ export default function ModeratorPage() {
                       fontSize: "14px",
                       fontWeight: isActive ? "600" : "500",
                       backgroundColor: isActive ? "#FFFFFF" : "transparent",
-                      color: isActive ? "#2563EB" : "#64748B",
+                      color: isActive ? "#059669" : "#64748B",
                       cursor: "pointer",
                       boxShadow: isActive ? "0 2px 4px rgba(0,0,0,0.04)" : "none",
                       transition: "all 0.2s ease"
                     }}
                   >
-                    {tab === "Most used" ? "Most Used" : tab === "Average used" ? "Average Used" : "Rare Used"}
+                    {tab}
                   </button>
                 );
               })}
             </div>
 
-            {/* TABLE / LOADING STATES */}
+            {/* TABLE AND LOADING STATES */}
             {loading ? (
               <div style={{ textAlign: "center", padding: "40px", color: "#64748B" }}>
                 <Loader2 size={28} className="animate-spin" style={{ margin: "0 auto 8px" }} />
-                <p>Loading pending contributions from PostgreSQL...</p>
+                <p>Loading database records...</p>
               </div>
             ) : error ? (
-              <div style={{ backgroundColor: "#FEF2F2", color: "#991B1B", padding: "16px", borderRadius: "10px" }}>
+              <div style={{ textAlign: "center", padding: "24px", color: "#DC2626", backgroundColor: "#FEF2F2", borderRadius: "8px" }}>
                 {error}
               </div>
             ) : filteredWords.length === 0 ? (
               <div style={{ textAlign: "center", padding: "40px 0", color: "#94A3B8" }}>
-                No pending words found in <b>"{activeTab}"</b> category.
+                No words available in <b>"{activeTab}"</b> category with <b>"{statusFilter}"</b> status.
               </div>
             ) : (
               /* DATA TABLE */
@@ -282,78 +310,96 @@ export default function ModeratorPage() {
                 <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
                   <thead>
                     <tr style={{ backgroundColor: "#F8FAFC", borderBottom: "1px solid #E2E8F0" }}>
-                      <th style={{ padding: "12px 16px", fontSize: "13px", fontWeight: "600", color: "#475569", width: "60px" }}>S.No.</th>
-                      <th style={{ padding: "12px 16px", fontSize: "13px", fontWeight: "600", color: "#475569" }}>Kokborok Word</th>
-                      <th style={{ padding: "12px 16px", fontSize: "13px", fontWeight: "600", color: "#475569" }}>English Word</th>
-                      <th style={{ padding: "12px 16px", fontSize: "13px", fontWeight: "600", color: "#475569" }}>Hindi Word</th>
-                      <th style={{ padding: "12px 16px", fontSize: "13px", fontWeight: "600", color: "#475569" }}>Bangali Word</th>
-                      <th style={{ padding: "12px 16px", fontSize: "13px", fontWeight: "600", color: "#475569" }}>Contributor Name</th>
-                      <th style={{ padding: "12px 16px", fontSize: "13px", fontWeight: "600", color: "#475569", textAlign: "center", width: "100px" }}>Action</th>
+                      <th style={{ padding: "12px 16px", fontSize: "13px", fontWeight: "600", color: "#475569", width: "50px" }}>S.No.</th>
+                      <th style={{ padding: "12px 16px", fontSize: "13px", fontWeight: "600", color: "#475569" }}>Kokborok</th>
+                      <th style={{ padding: "12px 16px", fontSize: "13px", fontWeight: "600", color: "#475569" }}>English</th>
+                      <th style={{ padding: "12px 16px", fontSize: "13px", fontWeight: "600", color: "#475569" }}>Hindi</th>
+                      <th style={{ padding: "12px 16px", fontSize: "13px", fontWeight: "600", color: "#475569" }}>Bangali</th>
+                      <th style={{ padding: "12px 16px", fontSize: "13px", fontWeight: "600", color: "#475569" }}>Submitted By</th>
+                      <th style={{ padding: "12px 16px", fontSize: "13px", fontWeight: "600", color: "#475569", textAlign: "center" }}>Status</th>
+                      <th style={{ padding: "12px 16px", fontSize: "13px", fontWeight: "600", color: "#475569", textAlign: "center", width: "110px" }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredWords.map((row, index) => (
-                      <tr key={row.id} style={{ borderBottom: "1px solid #F1F5F9" }}>
-                        <td style={{ padding: "14px 16px", fontSize: "14px", color: "#334155" }}>{index + 1}</td>
-                        <td style={{ padding: "14px 16px", fontSize: "14px", fontWeight: "600", color: "#0F172A" }}>{row.kokborok_word}</td>
-                        <td style={{ padding: "14px 16px", fontSize: "14px", color: "#334155" }}>{row.english_word}</td>
-                        <td style={{ padding: "14px 16px", fontSize: "14px", color: "#334155" }}>{row.hindi_word}</td>
-                        <td style={{ padding: "14px 16px", fontSize: "14px", color: "#334155" }}>{row.bangali_word}</td>
-                        <td style={{ padding: "14px 16px", fontSize: "14px", color: "#334155" }}>{row.contributor_name || "Anonymous"}</td>
-                        <td style={{ padding: "14px 16px" }}>
-                          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
-                            
-                            {/* 1. Quick Approve Button (Blue Circle) */}
-                            <button
-                              title="Direct Approve (Send to Admin)"
-                              onClick={() => handleApprove(row)}
-                              disabled={actionLoading}
-                              style={{
-                                width: "32px",
-                                height: "32px",
-                                borderRadius: "50%",
-                                backgroundColor: "#EFF6FF",
-                                border: "none",
-                                color: "#2563EB",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                cursor: "pointer"
-                              }}
-                            >
-                              <Eye size={16} />
-                            </button>
+                    {filteredWords.map((row, index) => {
+                      const status = (row.status || "pending").toLowerCase();
+                      return (
+                        <tr key={row.id || index} style={{ borderBottom: "1px solid #F1F5F9" }}>
+                          <td style={{ padding: "14px 16px", fontSize: "14px", color: "#334155" }}>{index + 1}</td>
+                          <td style={{ padding: "14px 16px", fontSize: "14px", fontWeight: "600", color: "#0F172A" }}>{row.kokborok_word}</td>
+                          <td style={{ padding: "14px 16px", fontSize: "14px", color: "#334155" }}>{row.english_word}</td>
+                          <td style={{ padding: "14px 16px", fontSize: "14px", color: "#334155" }}>{row.hindi_word}</td>
+                          <td style={{ padding: "14px 16px", fontSize: "14px", color: "#334155" }}>{row.bangali_word}</td>
+                          <td style={{ padding: "14px 16px", fontSize: "13px", color: "#64748B" }}>
+                            {row.contributor_name || "Anonymous"}
+                          </td>
+                          <td style={{ padding: "14px 16px", textAlign: "center" }}>
+                            <span style={{
+                              padding: "4px 10px",
+                              borderRadius: "12px",
+                              fontSize: "12px",
+                              fontWeight: "700",
+                              textTransform: "capitalize",
+                              backgroundColor: status === "approved" ? "#DCFCE7" : status === "rejected" ? "#FEE2E2" : "#FEF3C7",
+                              color: status === "approved" ? "#166534" : status === "rejected" ? "#991B1B" : "#92400E"
+                            }}>
+                              {status}
+                            </span>
+                          </td>
+                          <td style={{ padding: "14px 16px" }}>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                              
+                              {/* View Details Button */}
+                              <button
+                                title="View Details"
+                                onClick={() => {
+                                  setSelectedWord(row);
+                                  setIsViewModalOpen(true);
+                                }}
+                                style={{
+                                  width: "32px",
+                                  height: "32px",
+                                  borderRadius: "50%",
+                                  backgroundColor: "#EFF6FF",
+                                  border: "none",
+                                  color: "#2563EB",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  cursor: "pointer"
+                                }}
+                              >
+                                <Eye size={16} />
+                              </button>
 
-                            {/* 2. Edit & Approve Button (Orange Circle) */}
-                            <button
-                              title="Edit Word details"
-                              onClick={() => {
-                                setSelectedWord(row);
-                                setIsEditModalOpen(true);
-                              }}
-                              disabled={actionLoading}
-                              style={{
-                                width: "32px",
-                                height: "32px",
-                                borderRadius: "50%",
-                                backgroundColor: "#FFFBEB",
-                                border: "none",
-                                color: "#D97706",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                cursor: "pointer"
-                              }}
-                            >
-                              <Pencil size={15} />
-                            </button>
+                              {/* Edit Button */}
+                              <button
+                                title="Edit & Save Word"
+                                onClick={() => {
+                                  setSelectedWord(row);
+                                  setIsEditModalOpen(true);
+                                }}
+                                style={{
+                                  width: "32px",
+                                  height: "32px",
+                                  borderRadius: "50%",
+                                  backgroundColor: "#FFFBEB",
+                                  border: "none",
+                                  color: "#D97706",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  justifyContent: "center",
+                                  cursor: "pointer"
+                                }}
+                              >
+                                <Pencil size={16} />
+                              </button>
 
-                            {/* DELETE BUTTON IS REMOVED HERE - MODERATOR HAS NO DELETE PERMISSION */}
-
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -363,7 +409,56 @@ export default function ModeratorPage() {
         </main>
       </div>
 
-      {/* EDIT MODAL DIALOG (WRITE PERMISSION) */}
+      {/* VIEW DETAILS MODAL */}
+      {isViewModalOpen && selectedWord && (
+        <div style={{
+          position: "fixed",
+          inset: 0,
+          backgroundColor: "rgba(15, 23, 42, 0.4)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 999,
+          padding: "16px"
+        }}>
+          <div style={{
+            backgroundColor: "#FFFFFF",
+            borderRadius: "16px",
+            maxWidth: "450px",
+            width: "100%",
+            padding: "24px",
+            boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1)"
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+              <h3 style={{ margin: 0, fontSize: "18px", fontWeight: "700", color: "#0F172A" }}>
+                Word Details
+              </h3>
+              <button onClick={() => setIsViewModalOpen(false)} style={{ border: "none", background: "none", cursor: "pointer", color: "#64748B" }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "10px", fontSize: "14px" }}>
+              <div><strong>Kokborok:</strong> {selectedWord.kokborok_word}</div>
+              <div><strong>English:</strong> {selectedWord.english_word}</div>
+              <div><strong>Hindi:</strong> {selectedWord.hindi_word}</div>
+              <div><strong>Bengali:</strong> {selectedWord.bangali_word}</div>
+              <div><strong>Clustering:</strong> {selectedWord.clustering}</div>
+              <div><strong>Status:</strong> {selectedWord.status || "pending"}</div>
+              <div><strong>Submitted By:</strong> {selectedWord.contributor_name || "Anonymous"} ({selectedWord.submitted_by_email || "N/A"})</div>
+            </div>
+
+            <button
+              onClick={() => setIsViewModalOpen(false)}
+              style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "none", backgroundColor: "#059669", color: "#FFFFFF", fontWeight: "600", marginTop: "16px", cursor: "pointer" }}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT & SAVE MODAL */}
       {isEditModalOpen && selectedWord && (
         <div style={{
           position: "fixed",
@@ -385,7 +480,7 @@ export default function ModeratorPage() {
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
               <h3 style={{ margin: 0, fontSize: "18px", fontWeight: "700", color: "#0F172A" }}>
-                Edit & Approve Contribution
+                Edit & Save Word Details
               </h3>
               <button 
                 onClick={() => setIsEditModalOpen(false)}
@@ -400,7 +495,7 @@ export default function ModeratorPage() {
                 <label style={{ fontSize: "12px", fontWeight: "600", color: "#475569" }}>Kokborok Word</label>
                 <input
                   type="text"
-                  value={selectedWord.kokborok_word}
+                  value={selectedWord.kokborok_word || ""}
                   onChange={(e) => setSelectedWord({ ...selectedWord, kokborok_word: e.target.value })}
                   style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #CBD5E1", marginTop: "4px", boxSizing: "border-box" }}
                   required
@@ -411,7 +506,7 @@ export default function ModeratorPage() {
                 <label style={{ fontSize: "12px", fontWeight: "600", color: "#475569" }}>English Word</label>
                 <input
                   type="text"
-                  value={selectedWord.english_word}
+                  value={selectedWord.english_word || ""}
                   onChange={(e) => setSelectedWord({ ...selectedWord, english_word: e.target.value })}
                   style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #CBD5E1", marginTop: "4px", boxSizing: "border-box" }}
                   required
@@ -422,7 +517,7 @@ export default function ModeratorPage() {
                 <label style={{ fontSize: "12px", fontWeight: "600", color: "#475569" }}>Hindi Word</label>
                 <input
                   type="text"
-                  value={selectedWord.hindi_word}
+                  value={selectedWord.hindi_word || ""}
                   onChange={(e) => setSelectedWord({ ...selectedWord, hindi_word: e.target.value })}
                   style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #CBD5E1", marginTop: "4px", boxSizing: "border-box" }}
                   required
@@ -433,7 +528,7 @@ export default function ModeratorPage() {
                 <label style={{ fontSize: "12px", fontWeight: "600", color: "#475569" }}>Bangali Word</label>
                 <input
                   type="text"
-                  value={selectedWord.bangali_word}
+                  value={selectedWord.bangali_word || ""}
                   onChange={(e) => setSelectedWord({ ...selectedWord, bangali_word: e.target.value })}
                   style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #CBD5E1", marginTop: "4px", boxSizing: "border-box" }}
                   required
@@ -443,9 +538,9 @@ export default function ModeratorPage() {
               <div>
                 <label style={{ fontSize: "12px", fontWeight: "600", color: "#475569" }}>Clustering Category</label>
                 <select
-                  value={selectedWord.clustering}
+                  value={selectedWord.clustering || "Most used"}
                   onChange={(e) => setSelectedWord({ ...selectedWord, clustering: e.target.value })}
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #CBD5E1", marginTop: "4px", boxSizing: "border-box" }}
+                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #CBD5E1", marginTop: "4px", boxSizing: "border-box", backgroundColor: "#FFFFFF" }}
                 >
                   <option value="Most used">Most used</option>
                   <option value="Average used">Average used</option>
@@ -457,16 +552,38 @@ export default function ModeratorPage() {
                 <button
                   type="button"
                   onClick={() => setIsEditModalOpen(false)}
-                  style={{ flex: 1, padding: "10px", borderRadius: "8px", border: "1px solid #CBD5E1", backgroundColor: "#FFFFFF", cursor: "pointer" }}
+                  style={{
+                    flex: 1,
+                    padding: "10px",
+                    borderRadius: "8px",
+                    border: "1px solid #CBD5E1",
+                    backgroundColor: "#FFFFFF",
+                    color: "#475569",
+                    fontWeight: "600",
+                    cursor: "pointer"
+                  }}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={actionLoading}
-                  style={{ flex: 1, padding: "10px", borderRadius: "8px", border: "none", backgroundColor: "#2563EB", color: "#FFFFFF", fontWeight: "600", cursor: "pointer" }}
+                  style={{
+                    flex: 1,
+                    padding: "10px",
+                    borderRadius: "8px",
+                    border: "none",
+                    backgroundColor: "#059669",
+                    color: "#FFFFFF",
+                    fontWeight: "700",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "6px"
+                  }}
                 >
-                  {actionLoading ? "Saving..." : "Save & Approve"}
+                  {actionLoading ? <Loader2 size={16} className="animate-spin" /> : "Save Changes"}
                 </button>
               </div>
             </form>
