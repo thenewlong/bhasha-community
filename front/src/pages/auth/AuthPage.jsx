@@ -305,7 +305,7 @@ export default function AuthPage() {
           <img 
             src={logoImg} 
             alt="BHAShA Logo" 
-            style={{ height: "38px", maxWidth: "220px", objectFit: "contain" }}
+            style={{ height: "60px", maxWidth: "260px", objectFit: "contain" }}
             onError={(e) => {
               // Fallback UI agar image load hone me error aaye
               e.target.style.display = 'none';
