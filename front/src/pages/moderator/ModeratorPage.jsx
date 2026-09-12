@@ -71,24 +71,30 @@ export default function ModeratorPage() {
     return clusterMatch && statusMatch;
   });
 
-  // 2. Moderator Save Edit Action (Only Edit & Save feature)
+  // 2. Moderator Save Edit Action (Updates data and marks/keeps status as pending/submitted for admin review)
   const handleSaveEdit = async (e) => {
     e.preventDefault();
     setActionLoading(true);
 
     try {
+      // Sending updated word with status set to "pending" so it goes to the admin queue
+      const updatedPayload = {
+        ...selectedWord,
+        status: "pending" 
+      };
+
       const response = await fetch(`/api/moderator/update/${selectedWord.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(selectedWord)
+        body: JSON.stringify(updatedPayload)
       });
 
       if (response.ok) {
         setWordsList((prev) =>
-          prev.map((item) => (item.id === selectedWord.id ? selectedWord : item))
+          prev.map((item) => (item.id === selectedWord.id ? updatedPayload : item))
         );
         setIsEditModalOpen(false);
-        alert("Word edited and saved successfully!");
+        alert("Word edited and sent to admin for final approval successfully!");
       } else {
         alert("Failed to update word.");
       }
@@ -119,7 +125,7 @@ export default function ModeratorPage() {
         </div>
 
         <h1 style={{ fontSize: "20px", fontWeight: "700", color: "#0F172A", margin: 0, letterSpacing: "-0.3px" }}>
-          Moderator Dashboard
+          Moderator Dashboard (Read & Edit Access)
         </h1>
 
         <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
@@ -226,7 +232,7 @@ export default function ModeratorPage() {
             
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexWrap: "wrap", gap: "12px" }}>
               <h2 style={{ fontSize: "18px", fontWeight: "700", color: "#1E293B", margin: 0 }}>
-                Content Review & Editing
+                Content Review & Editing (Edits route to Admin)
               </h2>
 
               {/* Status Filter Dropdown */}
@@ -349,7 +355,7 @@ export default function ModeratorPage() {
                           <td style={{ padding: "14px 16px" }}>
                             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
                               
-                              {/* View Details Button */}
+                              {/* View Details Button (Read Access) */}
                               <button
                                 title="View Details"
                                 onClick={() => {
@@ -372,9 +378,9 @@ export default function ModeratorPage() {
                                 <Eye size={16} />
                               </button>
 
-                              {/* Edit Button */}
+                              {/* Edit Button (Write/Edit Access) */}
                               <button
-                                title="Edit & Save Word"
+                                title="Edit & Save Word (Sends to Admin)"
                                 onClick={() => {
                                   setSelectedWord(row);
                                   setIsEditModalOpen(true);
@@ -409,7 +415,7 @@ export default function ModeratorPage() {
         </main>
       </div>
 
-      {/* VIEW DETAILS MODAL */}
+      {/* VIEW DETAILS MODAL (READ-ONLY) */}
       {isViewModalOpen && selectedWord && (
         <div style={{
           position: "fixed",
@@ -431,7 +437,7 @@ export default function ModeratorPage() {
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
               <h3 style={{ margin: 0, fontSize: "18px", fontWeight: "700", color: "#0F172A" }}>
-                Word Details
+                Word Details (Read-Only)
               </h3>
               <button onClick={() => setIsViewModalOpen(false)} style={{ border: "none", background: "none", cursor: "pointer", color: "#64748B" }}>
                 <X size={20} />
@@ -458,7 +464,7 @@ export default function ModeratorPage() {
         </div>
       )}
 
-      {/* EDIT & SAVE MODAL */}
+      {/* EDIT & SAVE MODAL (WRITE/EDIT ACCESS -> SENDS TO ADMIN) */}
       {isEditModalOpen && selectedWord && (
         <div style={{
           position: "fixed",
@@ -480,7 +486,7 @@ export default function ModeratorPage() {
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
               <h3 style={{ margin: 0, fontSize: "18px", fontWeight: "700", color: "#0F172A" }}>
-                Edit & Save Word Details
+                Edit & Save Word (Pending Admin Review)
               </h3>
               <button 
                 onClick={() => setIsEditModalOpen(false)}
@@ -530,7 +536,7 @@ export default function ModeratorPage() {
                   type="text"
                   value={selectedWord.bangali_word || ""}
                   onChange={(e) => setSelectedWord({ ...selectedWord, bangali_word: e.target.value })}
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #CBD5E1", marginTop: "4px", boxSizing: "border-box" }}
+                  style={{ width: "10px", width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #CBD5E1", marginTop: "4px", boxSizing: "border-box" }}
                   required
                 />
               </div>
@@ -583,7 +589,7 @@ export default function ModeratorPage() {
                     gap: "6px"
                   }}
                 >
-                  {actionLoading ? <Loader2 size={16} className="animate-spin" /> : "Save Changes"}
+                  {actionLoading ? <Loader2 size={16} className="animate-spin" /> : "Save & Send to Admin"}
                 </button>
               </div>
             </form>
