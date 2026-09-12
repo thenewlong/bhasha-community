@@ -58,7 +58,7 @@ export default function AdminDashboard() {
     setLoading(true);
     setError("");
     try {
-      const response = await fetch("http://localhost:5000/api/admin/words");
+      const response = await fetch("api/admin/words");
       const result = await response.json();
 
       if (response.ok && result.success) {
@@ -89,7 +89,7 @@ export default function AdminDashboard() {
     if (!window.confirm(`Admin Permission: Permanently delete "${wordName}"?`)) return;
 
     try {
-      const response = await fetch(`http://localhost:5000/api/admin/delete/${id}`, {
+      const response = await fetch(`api/admin/delete/${id}`, {
         method: "DELETE"
       });
 
@@ -110,7 +110,7 @@ export default function AdminDashboard() {
     setActionLoading(true);
 
     try {
-      const response = await fetch(`http://localhost:5000/api/admin/update/${selectedWord.id}`, {
+      const response = await fetch(`api/admin/update/${selectedWord.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(selectedWord)

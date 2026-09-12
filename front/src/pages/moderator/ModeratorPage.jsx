@@ -92,7 +92,7 @@ export default function ModeratorPage() {
     setActionLoading(true);
 
     try {
-      const response = await fetch(`http://localhost:5000/api/moderator/review/${selectedWord.id}`, {
+      const response = await fetch(`api/moderator/review/${selectedWord.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
