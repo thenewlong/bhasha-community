@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
-import StudentProfileModal from "../../components/StudentProfileModal"; // 👈 Connected Student Profile Modal
+import StudentProfileModal from "../../components/StudentProfileModal";
+
+// 🖼️ Website Logo Asset Import (Apne folder structure ke hisab se path update karein)
+import logo from "../../assets/bhasha-logo.jpeg"; 
+
 import { 
   ChevronDown, 
   Leaf, 
   Layers, 
   User, 
-  Sparkles,
   Flame,
   Activity,
   Target,
@@ -30,13 +33,14 @@ export default function ContributionPage() {
 
   // UI State Controls
   const [loading, setLoading] = useState(false);
-  const [submittedName, setSubmittedName] = useState(""); // Submitted Contributor Name for Notification
+  const [submittedName, setSubmittedName] = useState("");
   const [showNotification, setShowNotification] = useState(false);
+  const [hasUnread, setHasUnread] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   // -------------------------------------------------------------
-  // 📱 MOBILE ANTI-ZOOM & GESTURE LOCK (iOS Safari & Android)
+  // 📱 MOBILE ANTI-ZOOM & GESTURE LOCK
   // -------------------------------------------------------------
   useEffect(() => {
     let viewportMeta = document.querySelector('meta[name="viewport"]');
@@ -65,12 +69,11 @@ export default function ContributionPage() {
     };
   }, []);
 
-  // Submit Handler Connected to Express Backend & Neon Database
+  // Submit Handler
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setErrorMsg("");
-    setShowNotification(false);
 
     const currentContributor = contributorName.trim() || "Contributor";
 
@@ -97,8 +100,9 @@ export default function ContributionPage() {
         throw new Error(data.message || "Failed to submit word to server.");
       }
 
-      // Trigger Notification & Save Name
+      // Trigger Notification on Top Right Bell Icon
       setSubmittedName(currentContributor);
+      setHasUnread(true);
       setShowNotification(true);
       
       // Reset Form Fields
@@ -106,11 +110,6 @@ export default function ContributionPage() {
       setEnglish("");
       setHindi("");
       setBangali("");
-
-      // Auto dismiss notification after 8 seconds (optional)
-      setTimeout(() => {
-        setShowNotification(false);
-      }, 8000);
 
     } catch (err) {
       setErrorMsg(err.message || "Something went wrong.");
@@ -136,110 +135,53 @@ export default function ContributionPage() {
       color: "#182216",
       display: "flex",
       justifyContent: "center",
-      padding: "20px 16px 60px 16px",
+      padding: "16px 12px 40px 12px",
       fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif",
       touchAction: "manipulation",
       overflowX: "hidden",
       position: "relative"
     }}>
-      {/* 🎨 INTERNATIONAL LEVEL KEYFRAMES & RESPONSIVE CSS */}
       <style>{`
         * { touch-action: manipulation; box-sizing: border-box; }
 
-        /* Mobile Zoom Lock - Input Font Size Guard */
         @media screen and (max-width: 768px) {
-          input, select { font-size: 16px !important; }
+          input, select { font-size: 14px !important; }
         }
 
-        /* Apple Glass Input Focus */
         .bhasa-input-focus:focus {
           border-color: #819A70 !important;
-          box-shadow: 0 0 0 4px rgba(129, 154, 112, 0.18) !important;
+          box-shadow: 0 0 0 3px rgba(129, 154, 112, 0.18) !important;
         }
 
-        /* Responsive Mobile Layout Fix for Translation Boxes */
-        @media screen and (max-width: 480px) {
-          .translation-tree-grid {
-            grid-template-columns: 1fr !important;
-            gap: 12px !important;
+        /* 🌳 MIND MAP TREE STRUCTURE LOCK FOR MOBILE SCREEN */
+        .translation-tree-grid {
+          display: grid !important;
+          grid-template-columns: repeat(3, 1fr) !important;
+          gap: 6px !important;
+        }
+
+        .tree-connector-line {
+          display: block !important;
+        }
+
+        /* 🚀 TOP NOTIFICATION DROPDOWN ANIMATION */
+        @keyframes notificationPop {
+          0% {
+            opacity: 0;
+            transform: translateY(-10px) scale(0.95);
           }
-          .tree-connector-line {
-            display: none !important;
-          }
-          .clustering-pills-grid {
-            grid-template-columns: 1fr 1fr 1fr !important;
-            gap: 6px !important;
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
           }
         }
 
-        /* International Level Liquid Slide Fill Hover Effect on Button */
+        /* Button Hover & Tap animation */
         .brand-apple-btn {
-          position: relative;
-          overflow: hidden;
-          z-index: 1;
-          transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.28s ease, background-color 0.2s ease;
-        }
-        .brand-apple-btn::before {
-          content: "";
-          position: absolute;
-          top: 0;
-          left: -100%;
-          width: 100%;
-          height: 100%;
-          background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
-          transition: left 0.75s cubic-bezier(0.16, 1, 0.3, 1);
-          z-index: 2;
-        }
-        .brand-apple-btn:hover::before {
-          left: 100%;
-        }
-        .brand-apple-btn:hover {
-          transform: translateY(-2px);
-          box-shadow: 0 10px 24px rgba(129, 154, 112, 0.4) !important;
+          transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
         .brand-apple-btn:active {
           transform: scale(0.98);
-        }
-
-        /* 🚀 INTERNATIONAL FLY-UP NOTIFICATION ANIMATION */
-        @keyframes flyUpNotification {
-          0% {
-            opacity: 0;
-            transform: translateY(40px) scale(0.92);
-            filter: blur(8px);
-          }
-          60% {
-            opacity: 1;
-            transform: translateY(-6px) scale(1.02);
-            filter: blur(0px);
-          }
-          100% {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-            filter: blur(0px);
-          }
-        }
-
-        /* Staggered Letter-by-Letter Entrance Animation for HAMBAI */
-        @keyframes hambaiLetterUp {
-          0% {
-            opacity: 0;
-            transform: translateY(20px) scale(0.5);
-          }
-          60% {
-            opacity: 1;
-            transform: translateY(-4px) scale(1.15);
-          }
-          100% {
-            opacity: 1;
-            transform: translateY(0) scale(1);
-          }
-        }
-
-        .hambai-char {
-          display: inline-block;
-          animation: hambaiLetterUp 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-          opacity: 0;
         }
 
         .bell-ring-anim {
@@ -256,39 +198,150 @@ export default function ContributionPage() {
 
       <div style={{ maxWidth: "500px", width: "100%" }}>
         
-        {/* TOP BAR: RIGHT SIDE AUTOMATIC STUDENT PROFILE DP CIRCLE */}
-        <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", marginBottom: "22px" }}>
+        {/* 🔝 TOP NAVIGATION BAR */}
+        <div style={{ 
+          display: "flex", 
+          justifyContent: "space-between", 
+          alignItems: "center", 
+          marginBottom: "20px",
+          width: "100%",
+          position: "relative"
+        }}>
           
-          {/* 👤 Automatic Round Circle Profile Avatar DP */}
-          <button
-            type="button"
-            onClick={() => setIsProfileOpen(true)}
-            title="Student Profile"
-            style={{
-              width: "44px",
-              height: "44px",
-              borderRadius: "50%",
-              backgroundColor: "#89ae71",
-              color: "#FFFFFF",
-              fontWeight: "700",
-              fontSize: "15px",
-              border: "2px solid #E8EFE5",
-              boxShadow: "0 4px 14px rgba(129, 154, 112, 0.35)",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              transition: "transform 0.2s ease"
-            }}
-          >
-            {getInitials()}
-          </button>
+          {/* 🖼️ LEFT SIDE: WEBSITE LOGO */}
+          <div style={{ display: "flex", alignItems: "center" }}>
+            <img 
+              src={logo} 
+              alt="Bhasa Logo" 
+              style={{ 
+                height: "38px", 
+                width: "auto", 
+                maxHeight: "42px", 
+                objectFit: "contain" 
+              }} 
+            />
+          </div>
+
+          {/* 🔔 RIGHT SIDE: NOTIFICATION BELL ICON + PROFILE DP */}
+          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+            
+            {/* Notification Bell Button */}
+            <div style={{ position: "relative" }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowNotification(!showNotification);
+                  setHasUnread(false);
+                }}
+                style={{
+                  width: "42px",
+                  height: "42px",
+                  borderRadius: "50%",
+                  backgroundColor: "#F4F7F2",
+                  border: "1px solid #D5DDD2",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  position: "relative"
+                }}
+              >
+                <Bell size={20} color="#819A70" className={hasUnread ? "bell-ring-anim" : ""} />
+                
+                {/* Red Dot Badge */}
+                {hasUnread && (
+                  <span style={{
+                    position: "absolute",
+                    top: "3px",
+                    right: "3px",
+                    width: "10px",
+                    height: "10px",
+                    borderRadius: "50%",
+                    backgroundColor: "#EF4444",
+                    border: "2px solid #FFFFFF"
+                  }}></span>
+                )}
+              </button>
+
+              {/* 🔔 TOP NOTIFICATION POPUP CARD */}
+              {showNotification && (
+                <div style={{
+                  position: "absolute",
+                  right: "0",
+                  top: "50px",
+                  width: "280px",
+                  backgroundColor: "#FFFFFF",
+                  borderRadius: "20px",
+                  padding: "16px",
+                  boxShadow: "0 10px 30px rgba(0,0,0,0.15)",
+                  border: "1px solid #E1EAD9",
+                  zIndex: 99,
+                  animation: "notificationPop 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards"
+                }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "8px" }}>
+                    <span style={{ fontSize: "11px", fontWeight: "800", color: "#819A70", letterSpacing: "1px" }}>
+                      NOTIFICATION
+                    </span>
+                    <button 
+                      onClick={() => setShowNotification(false)}
+                      style={{ border: "none", background: "none", cursor: "pointer", color: "#888" }}
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+
+                  {submittedName ? (
+                    <div>
+                      <div style={{ fontSize: "18px", fontWeight: "800", color: "#819A70", marginBottom: "2px" }}>
+                        HAMBAI, <span style={{ color: "#182216" }}>{submittedName}!</span>
+                      </div>
+                      <p style={{ fontSize: "12px", color: "#556453", margin: "0 0 8px 0" }}>
+                        Thank you for contributing to Kokborok language.
+                      </p>
+                      <div style={{ display: "flex", alignItems: "center", gap: "4px", fontSize: "11px", color: "#819A70", fontWeight: "700" }}>
+                        <CheckCircle2 size={14} />
+                        <span>Word submitted successfully</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <p style={{ fontSize: "12px", color: "#657563", margin: "4px 0" }}>
+                      No new notifications. Submit a word to see updates!
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* 👤 Student Profile Avatar DP */}
+            <button
+              type="button"
+              onClick={() => setIsProfileOpen(true)}
+              title="Student Profile"
+              style={{
+                width: "42px",
+                height: "42px",
+                borderRadius: "50%",
+                backgroundColor: "#89ae71",
+                color: "#FFFFFF",
+                fontWeight: "700",
+                fontSize: "14px",
+                border: "2px solid #E8EFE5",
+                boxShadow: "0 3px 10px rgba(129, 154, 112, 0.3)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer"
+              }}
+            >
+              {getInitials()}
+            </button>
+          </div>
         </div>
 
-        {/* HEADER SECTION */}
-        <div style={{ textAlign: "center", marginBottom: "28px" }}>
+        {/* HEADER TITLE SECTION */}
+        <div style={{ textAlign: "center", marginBottom: "20px" }}>
           <h1 style={{ 
-            fontSize: "34px", 
+            fontSize: "28px", 
             fontWeight: "800", 
             color: "#182216", 
             margin: "0 0 4px 0",
@@ -297,21 +350,21 @@ export default function ContributionPage() {
             KOKBOROK WORDS
           </h1>
 
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", margin: "6px 0" }}>
-            <span style={{ width: "36px", height: "1px", backgroundColor: "#D1DDD0" }}></span>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px", margin: "4px 0" }}>
+            <span style={{ width: "30px", height: "1px", backgroundColor: "#D1DDD0" }}></span>
             <span style={{ 
-              fontSize: "12px", 
+              fontSize: "11px", 
               fontWeight: "700", 
-              letterSpacing: "4px", 
+              letterSpacing: "3px", 
               color: "#819A70",
               textTransform: "uppercase"
             }}>
               CONTRIBUTION
             </span>
-            <span style={{ width: "36px", height: "1px", backgroundColor: "#D1DDD0" }}></span>
+            <span style={{ width: "30px", height: "1px", backgroundColor: "#D1DDD0" }}></span>
           </div>
 
-          <p style={{ color: "#657563", fontSize: "14px", margin: "4px 0 0 0" }}>
+          <p style={{ color: "#657563", fontSize: "13px", margin: "2px 0 0 0" }}>
             Preserve our language. Build a stronger tomorrow.
           </p>
         </div>
@@ -321,43 +374,42 @@ export default function ContributionPage() {
           <div style={{ 
             backgroundColor: "#FEF2F2", 
             color: "#991B1B", 
-            padding: "12px 16px", 
-            borderRadius: "16px", 
-            fontSize: "14px",
-            marginBottom: "18px", 
+            padding: "10px 14px", 
+            borderRadius: "14px", 
+            fontSize: "13px",
+            marginBottom: "16px", 
             border: "1px solid #FECACA",
             display: "flex",
             alignItems: "center",
             gap: "8px"
           }}>
-            <X size={18} />
+            <X size={16} />
             <span>{errorMsg}</span>
           </div>
         )}
 
         {/* FORM CONTAINER */}
-        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
           
-          {/* 1️⃣ MAIN KOKBOROK WORD & TRANSLATION TREE CARD */}
+          {/* 1️⃣ MAIN KOKBOROK WORD & MIND MAP TRANSLATION TREE CARD */}
           <div style={{
             backgroundColor: "#F9FAF8",
             border: "1px solid #E3E9E1",
-            borderRadius: "24px",
-            padding: "18px",
-            boxShadow: "0 6px 20px rgba(0,0,0,0.02)"
+            borderRadius: "20px",
+            padding: "14px",
+            boxShadow: "0 4px 14px rgba(0,0,0,0.02)"
           }}>
             
-            {/* Kokborok Label with Green Dot */}
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
-              <span style={{ width: "8px", height: "8px", borderRadius: "50%" }}></span>
-              <label style={{ fontSize: "14px", fontWeight: "700", color: "#182216" }}>
+            {/* Kokborok Label */}
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "8px" }}>
+              <label style={{ fontSize: "12px", fontWeight: "800", color: "#182216", letterSpacing: "0.5px" }}>
                 KOKBOROK WORD
               </label>
             </div>
 
             {/* Input Kokborok */}
             <div style={{ position: "relative" }}>
-              <Leaf size={18} color="#819A70" style={{ position: "absolute", left: "16px", top: "15px" }} />
+              <Leaf size={16} color="#819A70" style={{ position: "absolute", left: "12px", top: "13px" }} />
               <input
                 type="text"
                 required
@@ -367,38 +419,38 @@ export default function ContributionPage() {
                 className="bhasa-input-focus"
                 style={{
                   width: "100%",
-                  padding: "13px 16px 13px 44px",
-                  borderRadius: "16px",
+                  padding: "10px 12px 10px 38px",
+                  borderRadius: "14px",
                   border: "1px solid #D5DDD2",
                   backgroundColor: "#FFFFFF",
                   color: "#182216",
                   outline: "none",
-                  fontSize: "14.5px"
+                  fontSize: "13.5px"
                 }}
               />
             </div>
 
-            {/* 🌳 TREE CONNECTOR LINES */}
-            <div className="tree-connector-line" style={{ position: "relative", height: "26px", width: "100%" }}>
-              <div style={{ position: "absolute", left: "50%", top: 0, height: "13px", width: "2px", backgroundColor: "#B2C5A4" }}></div>
-              <div style={{ position: "absolute", left: "16.66%", right: "16.66%", top: "13px", height: "2px", backgroundColor: "#B2C5A4" }}></div>
-              <div style={{ position: "absolute", left: "16.66%", top: "13px", bottom: 0, width: "2px", backgroundColor: "#B2C5A4" }}></div>
-              <div style={{ position: "absolute", left: "50%", top: "13px", bottom: 0, width: "2px", backgroundColor: "#B2C5A4" }}></div>
-              <div style={{ position: "absolute", right: "16.66%", top: "13px", bottom: 0, width: "2px", backgroundColor: "#B2C5A4" }}></div>
+            {/* 🌳 MIND MAP TREE CONNECTOR LINES */}
+            <div className="tree-connector-line" style={{ position: "relative", height: "22px", width: "100%", margin: "2px 0" }}>
+              <div style={{ position: "absolute", left: "50%", top: 0, height: "11px", width: "2px", backgroundColor: "#B2C5A4" }}></div>
+              <div style={{ position: "absolute", left: "16.66%", right: "16.66%", top: "11px", height: "2px", backgroundColor: "#B2C5A4" }}></div>
+              <div style={{ position: "absolute", left: "16.66%", top: "11px", bottom: 0, width: "2px", backgroundColor: "#B2C5A4" }}></div>
+              <div style={{ position: "absolute", left: "50%", top: "11px", bottom: 0, width: "2px", backgroundColor: "#B2C5A4" }}></div>
+              <div style={{ position: "absolute", right: "16.66%", top: "11px", bottom: 0, width: "2px", backgroundColor: "#B2C5A4" }}></div>
             </div>
 
-            {/* 3 TRANSLATION BOXES (RESPONSIVE GRID FOR MOBILE FIX) */}
-            <div className="translation-tree-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px" }}>
+            {/* 3 TRANSLATION BOXES (FORCED 3-COLUMN MIND MAP GRID FOR MOBILE SCREEN) */}
+            <div className="translation-tree-grid">
               
               {/* English Box */}
               <div style={{
                 backgroundColor: "#FFFFFF",
                 border: "1px solid #E1E8DE",
-                borderRadius: "16px",
-                padding: "12px",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.02)"
+                borderRadius: "12px",
+                padding: "8px 6px",
+                minWidth: 0
               }}>
-                <label style={{ fontSize: "11px", fontWeight: "700", color: "#182216", display: "block", marginBottom: "6px" }}>
+                <label style={{ fontSize: "9.5px", fontWeight: "800", color: "#182216", display: "block", marginBottom: "4px", textAlign: "center", whiteSpace: "nowrap" }}>
                   ENGLISH WORD
                 </label>
                 <input
@@ -410,13 +462,14 @@ export default function ContributionPage() {
                   className="bhasa-input-focus"
                   style={{
                     width: "100%",
-                    padding: "8px 10px",
-                    borderRadius: "10px",
+                    padding: "6px 6px",
+                    borderRadius: "8px",
                     border: "1px solid #D5DDD2",
                     backgroundColor: "#F8FAF7",
                     color: "#182216",
-                    fontSize: "12px",
-                    outline: "none"
+                    fontSize: "11px",
+                    outline: "none",
+                    textAlign: "center"
                   }}
                 />
               </div>
@@ -425,11 +478,11 @@ export default function ContributionPage() {
               <div style={{
                 backgroundColor: "#FFFFFF",
                 border: "1px solid #E1E8DE",
-                borderRadius: "16px",
-                padding: "12px",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.02)"
+                borderRadius: "12px",
+                padding: "8px 6px",
+                minWidth: 0
               }}>
-                <label style={{ fontSize: "11px", fontWeight: "700", color: "#182216", display: "block", marginBottom: "6px" }}>
+                <label style={{ fontSize: "9.5px", fontWeight: "800", color: "#182216", display: "block", marginBottom: "4px", textAlign: "center", whiteSpace: "nowrap" }}>
                   HINDI WORD
                 </label>
                 <input
@@ -441,13 +494,14 @@ export default function ContributionPage() {
                   className="bhasa-input-focus"
                   style={{
                     width: "100%",
-                    padding: "8px 10px",
-                    borderRadius: "10px",
+                    padding: "6px 6px",
+                    borderRadius: "8px",
                     border: "1px solid #D5DDD2",
                     backgroundColor: "#F8FAF7",
                     color: "#182216",
-                    fontSize: "12px",
-                    outline: "none"
+                    fontSize: "11px",
+                    outline: "none",
+                    textAlign: "center"
                   }}
                 />
               </div>
@@ -456,11 +510,11 @@ export default function ContributionPage() {
               <div style={{
                 backgroundColor: "#FFFFFF",
                 border: "1px solid #E1E8DE",
-                borderRadius: "16px",
-                padding: "12px",
-                boxShadow: "0 2px 8px rgba(0,0,0,0.02)"
+                borderRadius: "12px",
+                padding: "8px 6px",
+                minWidth: 0
               }}>
-                <label style={{ fontSize: "11px", fontWeight: "700", color: "#182216", display: "block", marginBottom: "6px" }}>
+                <label style={{ fontSize: "9.5px", fontWeight: "800", color: "#182216", display: "block", marginBottom: "4px", textAlign: "center", whiteSpace: "nowrap" }}>
                   BANGALI WORD
                 </label>
                 <input
@@ -472,13 +526,14 @@ export default function ContributionPage() {
                   className="bhasa-input-focus"
                   style={{
                     width: "100%",
-                    padding: "8px 10px",
-                    borderRadius: "10px",
+                    padding: "6px 6px",
+                    borderRadius: "8px",
                     border: "1px solid #D5DDD2",
                     backgroundColor: "#F8FAF7",
                     color: "#182216",
-                    fontSize: "12px",
-                    outline: "none"
+                    fontSize: "11px",
+                    outline: "none",
+                    textAlign: "center"
                   }}
                 />
               </div>
@@ -486,139 +541,133 @@ export default function ContributionPage() {
             </div>
           </div>
 
-          {/* 2️⃣ SELECT CLUSTERING CARD WITH QUICK SELECTION PILLS */}
+          {/* 2️⃣ SELECT CLUSTERING CARD */}
           <div style={{
             backgroundColor: "#F9FAF8",
             border: "1px solid #E3E9E1",
-            borderRadius: "24px",
-            padding: "18px"
+            borderRadius: "20px",
+            padding: "14px"
           }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
-              <Layers size={18} color="#819A70" />
-              <label style={{ fontSize: "14px", fontWeight: "700", color: "#182216" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "8px" }}>
+              <Layers size={16} color="#819A70" />
+              <label style={{ fontSize: "12px", fontWeight: "800", color: "#182216", letterSpacing: "0.5px" }}>
                 CLUSTERING
               </label>
             </div>
 
             {/* Dropdown */}
-            <div style={{ position: "relative", marginBottom: "12px" }}>
+            <div style={{ position: "relative", marginBottom: "10px" }}>
               <select
                 value={clustering}
                 onChange={(e) => setClustering(e.target.value)}
                 className="bhasa-input-focus"
                 style={{
                   width: "100%",
-                  padding: "13px 16px",
-                  borderRadius: "16px",
+                  padding: "10px 14px",
+                  borderRadius: "14px",
                   border: "1px solid #D5DDD2",
                   backgroundColor: "#FFFFFF",
                   color: "#182216",
-                  fontSize: "14px",
+                  fontSize: "13px",
                   outline: "none",
-                  appearance: "none",
+                  appearance: "none"
                 }}
               >
                 <option value="Most used">Most used</option>
                 <option value="Average used">Average used</option>
                 <option value="Rare used">Rare used</option>
               </select>
-              <ChevronDown size={18} color="#657563" style={{ position: "absolute", right: "16px", top: "15px", pointerEvents: "none" }} />
+              <ChevronDown size={16} color="#657563" style={{ position: "absolute", right: "14px", top: "13px", pointerEvents: "none" }} />
             </div>
 
             {/* Quick Pill Selection Buttons */}
-            <div className="clustering-pills-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "6px" }}>
               
-              {/* Most Used Button */}
               <button
                 type="button"
                 onClick={() => setClustering("Most used")}
                 style={{
-                  padding: "9px 6px",
-                  borderRadius: "14px",
+                  padding: "8px 4px",
+                  borderRadius: "12px",
                   border: clustering === "Most used" ? "1.5px solid #819A70" : "1px solid #D5DDD2",
                   backgroundColor: clustering === "Most used" ? "#819A70" : "#FFFFFF",
                   color: clustering === "Most used" ? "#FFFFFF" : "#556453",
-                  fontSize: "12px",
-                  fontWeight: "600",
+                  fontSize: "11px",
+                  fontWeight: "700",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  gap: "5px",
-                  cursor: "pointer",
-                  transition: "all 0.2s ease"
+                  gap: "4px",
+                  cursor: "pointer"
                 }}
               >
-                <Flame size={14} color={clustering === "Most used" ? "#FFFFFF" : "#819A70"} />
+                <Flame size={13} color={clustering === "Most used" ? "#FFFFFF" : "#819A70"} />
                 Most used
               </button>
 
-              {/* Average Used Button */}
               <button
                 type="button"
                 onClick={() => setClustering("Average used")}
                 style={{
-                  padding: "9px 6px",
-                  borderRadius: "14px",
+                  padding: "8px 4px",
+                  borderRadius: "12px",
                   border: clustering === "Average used" ? "1.5px solid #819A70" : "1px solid #D5DDD2",
                   backgroundColor: clustering === "Average used" ? "#819A70" : "#FFFFFF",
                   color: clustering === "Average used" ? "#FFFFFF" : "#556453",
-                  fontSize: "12px",
-                  fontWeight: "600",
+                  fontSize: "11px",
+                  fontWeight: "700",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  gap: "5px",
-                  cursor: "pointer",
-                  transition: "all 0.2s ease"
+                  gap: "4px",
+                  cursor: "pointer"
                 }}
               >
-                <Activity size={14} color={clustering === "Average used" ? "#FFFFFF" : "#819A70"} />
+                <Activity size={13} color={clustering === "Average used" ? "#FFFFFF" : "#819A70"} />
                 Average
               </button>
 
-              {/* Rare Used Button (FIXED) */}
               <button
                 type="button"
                 onClick={() => setClustering("Rare used")}
                 style={{
-                  padding: "9px 6px",
-                  borderRadius: "14px",
+                  padding: "8px 4px",
+                  borderRadius: "12px",
                   border: clustering === "Rare used" ? "1.5px solid #819A70" : "1px solid #D5DDD2",
                   backgroundColor: clustering === "Rare used" ? "#819A70" : "#FFFFFF",
                   color: clustering === "Rare used" ? "#FFFFFF" : "#556453",
-                  fontSize: "12px",
-                  fontWeight: "600",
+                  fontSize: "11px",
+                  fontWeight: "700",
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  gap: "5px",
-                  cursor: "pointer",
-                  transition: "all 0.2s ease"
+                  gap: "4px",
+                  cursor: "pointer"
                 }}
               >
-                <Target size={14} color={clustering === "Rare used" ? "#FFFFFF" : "#819A70"} />
+                <Target size={13} color={clustering === "Rare used" ? "#FFFFFF" : "#819A70"} />
                 Rare used
               </button>
 
             </div>
           </div>
 
-          {/* 3️⃣ CONTRIBUTION NAME CARD */}
+          {/* 3️⃣ CONTRIBUTOR NAME CARD */}
           <div style={{
             backgroundColor: "#F9FAF8",
             border: "1px solid #E3E9E1",
-            borderRadius: "24px",
-            padding: "18px"
+            borderRadius: "20px",
+            padding: "14px"
           }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
-              <User size={18} color="#819A70" />
-              <label style={{ fontSize: "14px", fontWeight: "700", color: "#182216" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "8px" }}>
+              <User size={16} color="#819A70" />
+              <label style={{ fontSize: "12px", fontWeight: "800", color: "#182216", letterSpacing: "0.5px" }}>
                 CONTRIBUTOR NAME
               </label>
             </div>
 
             <div style={{ position: "relative" }}>
-              <User size={18} color="#819A70" style={{ position: "absolute", left: "16px", top: "15px" }} />
+              <User size={16} color="#819A70" style={{ position: "absolute", left: "12px", top: "13px" }} />
               <input
                 type="text"
                 required
@@ -628,12 +677,12 @@ export default function ContributionPage() {
                 className="bhasa-input-focus"
                 style={{
                   width: "100%",
-                  padding: "13px 16px 13px 44px",
-                  borderRadius: "16px",
+                  padding: "10px 12px 10px 38px",
+                  borderRadius: "14px",
                   border: "1px solid #D5DDD2",
                   backgroundColor: "#FFFFFF",
                   color: "#182216",
-                  fontSize: "14.5px",
+                  fontSize: "13.5px",
                   outline: "none"
                 }}
               />
@@ -650,17 +699,17 @@ export default function ContributionPage() {
               backgroundColor: "#819A70",
               color: "#FFFFFF",
               fontWeight: "700",
-              fontSize: "16px",
-              padding: "16px",
-              borderRadius: "26px",
+              fontSize: "15px",
+              padding: "14px",
+              borderRadius: "22px",
               border: "none",
               cursor: loading ? "wait" : "pointer",
               marginTop: "4px",
-              boxShadow: "0 6px 18px rgba(129, 154, 112, 0.3)",
+              boxShadow: "0 4px 14px rgba(129, 154, 112, 0.3)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              gap: "8px"
+              gap: "6px"
             }}
           >
             {loading ? "Submitting..." : "Submit Your Words →"}
@@ -668,152 +717,22 @@ export default function ContributionPage() {
 
         </form>
 
-        {/* 🔔 INTERNATIONAL FLY-UP NOTIFICATION WITH HAMBAI + CONTRIBUTOR NAME */}
-        {showNotification && (
-          <div style={{
-            marginTop: "20px",
-            padding: "20px",
-            backgroundColor: "#F4F7F2",
-            borderRadius: "24px",
-            border: "1.5px solid #C4D5BA",
-            boxShadow: "0 14px 35px rgba(129, 154, 112, 0.22)",
-            animation: "flyUpNotification 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards",
-            position: "relative"
-          }}>
-            {/* Close Cross Notification */}
-            <button
-              onClick={() => setShowNotification(false)}
-              style={{
-                position: "absolute",
-                right: "14px",
-                top: "14px",
-                border: "none",
-                background: "none",
-                color: "#657563",
-                cursor: "pointer"
-              }}
-            >
-              <X size={18} />
-            </button>
-
-            {/* Notification Bell Badge Header */}
-            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
-              <div style={{
-                position: "relative",
-                width: "38px",
-                height: "38px",
-                borderRadius: "50%",
-                backgroundColor: "#819A70",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center"
-              }}>
-                <Bell size={20} color="#FFFFFF" className="bell-ring-anim" />
-                <span style={{
-                  position: "absolute",
-                  top: "2px",
-                  right: "2px",
-                  width: "10px",
-                  height: "10px",
-                  borderRadius: "50%",
-                  backgroundColor: "#EF4444",
-                  border: "2px solid #FFFFFF"
-                }}></span>
-              </div>
-
-              <div>
-                <span style={{ fontSize: "11px", fontWeight: "800", color: "#819A70", letterSpacing: "1.5px", textTransform: "uppercase" }}>
-                  NEW CONTRIBUTION LOGGED
-                </span>
-                <p style={{ margin: "2px 0 0 0", fontSize: "12px", color: "#52634f", fontWeight: "600" }}>
-                  Word successfully synced!
-                </p>
-              </div>
-            </div>
-
-            {/* Animated HAMBAI + Contributor Name Display */}
-            <div style={{
-              backgroundColor: "#FFFFFF",
-              borderRadius: "18px",
-              padding: "16px",
-              border: "1px solid #E1EAD9",
-              textAlign: "center"
-            }}>
-              
-              <div style={{
-                fontSize: "32px",
-                fontWeight: "900",
-                color: "#819A70",
-                letterSpacing: "4px",
-                margin: "4px 0",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "2px",
-                flexWrap: "wrap"
-              }}>
-                {/* HAMBAI Text Animated */}
-                {"HAMBAI,".split("").map((letter, index) => (
-                  <span
-                    key={index}
-                    className="hambai-char"
-                    style={{ animationDelay: `${index * 0.08}s` }}
-                  >
-                    {letter}
-                  </span>
-                ))}
-                
-                {/* Contributor Name Highlighted */}
-                <span style={{
-                  color: "#182216",
-                  marginLeft: "8px",
-                  fontSize: "26px",
-                  fontWeight: "800",
-                  textTransform: "capitalize"
-                }}>
-                  {submittedName}!
-                </span>
-              </div>
-
-              <p style={{ fontSize: "12px", fontWeight: "700", color: "#6A7D5E", margin: "2px 0 10px 0" }}>
-                ( Thank You for Contributing to Kokborok )
-              </p>
-
-              <div style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: "6px",
-                fontSize: "12.5px",
-                color: "#2C3A27",
-                backgroundColor: "#F4F7F2",
-                padding: "6px 14px",
-                borderRadius: "16px",
-                fontWeight: "600"
-              }}>
-                <CheckCircle2 size={16} color="#819A70" />
-                <span>Added under {submittedName}'s Profile</span>
-              </div>
-            </div>
-
-          </div>
-        )}
-
-        {/* FOOTER DIVIDER LEAF */}
+        {/* 🌿 FOOTER DIVIDER LEAF */}
         <div style={{ 
           display: "flex", 
           alignItems: "center", 
           justifyContent: "center", 
-          gap: "12px", 
-          marginTop: "32px" 
+          gap: "10px", 
+          marginTop: "24px" 
         }}>
-          <span style={{ width: "40px", height: "1px", backgroundColor: "#E3E9E1" }}></span>
-          <Leaf size={16} color="#819A70" />
-          <span style={{ width: "40px", height: "1px", backgroundColor: "#E3E9E1" }}></span>
+          <span style={{ width: "36px", height: "1px", backgroundColor: "#E3E9E1" }}></span>
+          <Leaf size={14} color="#819A70" />
+          <span style={{ width: "36px", height: "1px", backgroundColor: "#E3E9E1" }}></span>
         </div>
 
       </div>
 
-      {/* 👤 SEPARATED STUDENT PROFILE MODAL COMPONENT */}
+      {/* 👤 STUDENT PROFILE MODAL */}
       <StudentProfileModal
         isOpen={isProfileOpen}
         onClose={() => setIsProfileOpen(false)}
