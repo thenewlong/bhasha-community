@@ -632,21 +632,9 @@ export default function AuthPage() {
               {isLogin ? "Create Account" : "Log In"}
             </button>
           </p>
-        </div>
+       
 
-        {/* BOTTOM LEAF MOTIF & MOUNTAIN VECTOR */}
-        <div 
-          className="bottom-graphic"
-          style={{ 
-            margin: "auto -36px 0 -36px", 
-            padding: "24px 20px 20px 20px", 
-            backgroundColor: "#EDF2EA", 
-            textAlign: "center",
-            position: "relative",
-            overflow: "hidden"
-          }}
-        >
-         
+        
           
           
         </div>

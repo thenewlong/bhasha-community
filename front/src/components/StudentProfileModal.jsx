@@ -1,69 +1,72 @@
 import React from "react";
-import { useAuth } from "../context/AuthContext";
-import { User, Mail, ShieldCheck, Award, X, LogOut } from "lucide-react";
+import { X, Mail, ShieldCheck, LogOut } from "lucide-react";
 
-export default function StudentProfileModal({ isOpen, onClose, isDarkMode }) {
-  const { currentUser, logout } = useAuth();
-
+export default function StudentProfileModal({ isOpen, onClose, currentUser, logout }) {
   if (!isOpen) return null;
 
-  // Extract automatic name & details from currentUser object
-  const studentName = currentUser?.displayName || currentUser?.email?.split("@")[0] || "Student Contributor";
-  const email = currentUser?.email || "student@bhasa.com";
-  const initials = studentName.substring(0, 2).toUpperCase();
-
-  const handleLogout = async () => {
-    if (logout) await logout();
-    onClose();
-    window.location.href = "/";
+  // Student DP Initials Helper
+  const getInitials = () => {
+    const name = currentUser?.displayName || currentUser?.email || "Student";
+    const parts = name.split(" ");
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
   };
 
   return (
     <div style={{
       position: "fixed",
       inset: 0,
-      backgroundColor: "rgba(0, 0, 0, 0.7)",
-      backdropFilter: "blur(8px)",
-      zIndex: 10000,
+      backgroundColor: "rgba(0, 0, 0, 0.5)",
+      backdropFilter: "blur(6px)",
+      zIndex: 9999,
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
       padding: "20px"
     }}>
       <div style={{
-        backgroundColor: isDarkMode ? "#121A16" : "#FFFFFF",
-        border: `1px solid ${isDarkMode ? "rgba(255, 255, 255, 0.1)" : "#E1E8E0"}`,
+        backgroundColor: "#FFFFFF",
         borderRadius: "28px",
-        padding: "30px",
+        padding: "28px",
         maxWidth: "360px",
         width: "100%",
-        color: isDarkMode ? "#F0F4F1" : "#1B241C",
+        boxShadow: "0 20px 50px rgba(0,0,0,0.2)",
         position: "relative",
-        boxShadow: "0 20px 50px rgba(0,0,0,0.3)"
+        border: "1px solid #E1E8DE",
+        animation: "modalPop 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards"
       }}>
-        {/* Close Button */}
+        <style>{`
+          @keyframes modalPop {
+            0% { opacity: 0; transform: scale(0.9) translateY(20px); }
+            100% { opacity: 1; transform: scale(1) translateY(0); }
+          }
+        `}</style>
+
+        {/* Close Cross Button */}
         <button
           onClick={onClose}
           style={{
             position: "absolute",
-            right: "16px",
-            top: "16px",
+            right: "18px",
+            top: "18px",
             border: "none",
             background: "none",
-            color: isDarkMode ? "#8E9E93" : "#5C6B5E",
+            color: "#657563",
             cursor: "pointer"
           }}
         >
           <X size={20} />
         </button>
 
-        {/* Profile Avatar Header */}
+        {/* Avatar & Header */}
         <div style={{ textAlign: "center", marginBottom: "20px" }}>
           <div style={{
-            width: "70px",
-            height: "70px",
+            width: "72px",
+            height: "72px",
             borderRadius: "50%",
-            background: "linear-gradient(135deg, #4ADE80 0%, #16A34A 100%)",
+            backgroundColor: "#819A70",
             color: "#FFFFFF",
             fontWeight: "800",
             fontSize: "24px",
@@ -71,66 +74,80 @@ export default function StudentProfileModal({ isOpen, onClose, isDarkMode }) {
             alignItems: "center",
             justifyContent: "center",
             margin: "0 auto 12px auto",
-            border: "3px solid #86EFAC",
-            boxShadow: "0 8px 20px rgba(74, 222, 128, 0.3)"
+            boxShadow: "0 8px 20px rgba(129, 154, 112, 0.35)",
+            border: "3px solid #E8EFE5"
           }}>
-            {initials}
+            {getInitials()}
           </div>
-          <h3 style={{ margin: "0 0 4px 0", fontSize: "18px", fontWeight: "700" }}>{studentName}</h3>
+
+          <h3 style={{ margin: "0 0 4px 0", fontSize: "18px", fontWeight: "700", color: "#182216" }}>
+            {currentUser?.displayName || currentUser?.email?.split("@")[0] || "Student Contributor"}
+          </h3>
+
           <span style={{ 
             fontSize: "11px", 
             fontWeight: "700", 
-            color: "#4ADE80", 
-            backgroundColor: "rgba(74, 222, 128, 0.12)",
-            padding: "4px 10px",
-            borderRadius: "12px",
-            textTransform: "uppercase"
+            color: "#819A70", 
+            backgroundColor: "#F2F6F0",
+            padding: "4px 12px",
+            borderRadius: "14px",
+            textTransform: "uppercase",
+            letterSpacing: "0.5px"
           }}>
-            Student Contributor
+            Verified Student
           </span>
         </div>
 
-        {/* Info Cards */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "22px" }}>
+        {/* Profile Info Details */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "20px" }}>
           <div style={{
             display: "flex",
             alignItems: "center",
             gap: "12px",
-            padding: "12px",
-            backgroundColor: isDarkMode ? "#19241F" : "#F4F7F4",
+            padding: "12px 14px",
+            backgroundColor: "#F8FAF7",
             borderRadius: "14px",
-            fontSize: "13px"
+            fontSize: "13px",
+            border: "1px solid #E5EBE3",
+            color: "#2C3A27"
           }}>
-            <Mail size={16} color="#4ADE80" />
-            <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{email}</span>
+            <Mail size={16} color="#819A70" />
+            <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
+              {currentUser?.email || "student@bhasa.com"}
+            </span>
           </div>
 
           <div style={{
             display: "flex",
             alignItems: "center",
             gap: "12px",
-            padding: "12px",
-            backgroundColor: isDarkMode ? "#19241F" : "#F4F7F4",
+            padding: "12px 14px",
+            backgroundColor: "#F8FAF7",
             borderRadius: "14px",
-            fontSize: "13px"
+            fontSize: "13px",
+            border: "1px solid #E5EBE3",
+            color: "#2C3A27"
           }}>
-            <ShieldCheck size={16} color="#4ADE80" />
-            <span>Account Verified & Active</span>
+            <ShieldCheck size={16} color="#819A70" />
+            <span>Automatic Profile Synced</span>
           </div>
         </div>
 
         {/* Logout Action */}
         <button
-          onClick={handleLogout}
+          onClick={async () => {
+            if (logout) await logout();
+            onClose();
+          }}
           style={{
             width: "100%",
-            backgroundColor: "#EF4444",
-            color: "#FFFFFF",
-            fontWeight: "600",
+            backgroundColor: "#FEF2F2",
+            color: "#DC2626",
+            fontWeight: "700",
             fontSize: "14px",
-            padding: "12px",
-            borderRadius: "16px",
-            border: "none",
+            padding: "13px",
+            borderRadius: "18px",
+            border: "1px solid #FCA5A5",
             cursor: "pointer",
             display: "flex",
             alignItems: "center",

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
+import StudentProfileModal from "../../components/StudentProfileModal"; // 👈 Connected Student Profile Modal
 import { 
   ChevronDown, 
-  ArrowLeft, 
   Leaf, 
   Layers, 
   User, 
@@ -11,9 +11,7 @@ import {
   Activity,
   Target,
   X,
-  Mail,
-  ShieldCheck,
-  LogOut,
+  Bell,
   CheckCircle2
 } from "lucide-react";
 
@@ -32,7 +30,8 @@ export default function ContributionPage() {
 
   // UI State Controls
   const [loading, setLoading] = useState(false);
-  const [successMsg, setSuccessMsg] = useState(false);
+  const [submittedName, setSubmittedName] = useState(""); // Submitted Contributor Name for Notification
+  const [showNotification, setShowNotification] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
@@ -71,7 +70,9 @@ export default function ContributionPage() {
     e.preventDefault();
     setLoading(true);
     setErrorMsg("");
-    setSuccessMsg(false);
+    setShowNotification(false);
+
+    const currentContributor = contributorName.trim() || "Contributor";
 
     const payload = {
       kokborok_word: kokborok,
@@ -79,7 +80,7 @@ export default function ContributionPage() {
       hindi_word: hindi,
       bangali_word: bangali,
       clustering: clustering,
-      contributor_name: contributorName,
+      contributor_name: currentContributor,
       submitted_by_email: currentUser?.email || "anonymous@bhasa.com"
     };
 
@@ -96,13 +97,21 @@ export default function ContributionPage() {
         throw new Error(data.message || "Failed to submit word to server.");
       }
 
-      setSuccessMsg(true);
+      // Trigger Notification & Save Name
+      setSubmittedName(currentContributor);
+      setShowNotification(true);
       
       // Reset Form Fields
       setKokborok("");
       setEnglish("");
       setHindi("");
       setBangali("");
+
+      // Auto dismiss notification after 8 seconds (optional)
+      setTimeout(() => {
+        setShowNotification(false);
+      }, 8000);
+
     } catch (err) {
       setErrorMsg(err.message || "Something went wrong.");
     } finally {
@@ -127,10 +136,11 @@ export default function ContributionPage() {
       color: "#182216",
       display: "flex",
       justifyContent: "center",
-      padding: "20px 16px 50px 16px",
+      padding: "20px 16px 60px 16px",
       fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif",
       touchAction: "manipulation",
-      overflowX: "hidden"
+      overflowX: "hidden",
+      position: "relative"
     }}>
       {/* 🎨 INTERNATIONAL LEVEL KEYFRAMES & RESPONSIVE CSS */}
       <style>{`
@@ -145,6 +155,21 @@ export default function ContributionPage() {
         .bhasa-input-focus:focus {
           border-color: #819A70 !important;
           box-shadow: 0 0 0 4px rgba(129, 154, 112, 0.18) !important;
+        }
+
+        /* Responsive Mobile Layout Fix for Translation Boxes */
+        @media screen and (max-width: 480px) {
+          .translation-tree-grid {
+            grid-template-columns: 1fr !important;
+            gap: 12px !important;
+          }
+          .tree-connector-line {
+            display: none !important;
+          }
+          .clustering-pills-grid {
+            grid-template-columns: 1fr 1fr 1fr !important;
+            gap: 6px !important;
+          }
         }
 
         /* International Level Liquid Slide Fill Hover Effect on Button */
@@ -176,63 +201,64 @@ export default function ContributionPage() {
           transform: scale(0.98);
         }
 
-        /* Staggered Letter-by-Letter Entrance Animation for HAMBAI */
-        @keyframes hambaiLetterUp {
+        /* 🚀 INTERNATIONAL FLY-UP NOTIFICATION ANIMATION */
+        @keyframes flyUpNotification {
           0% {
             opacity: 0;
-            transform: translateY(30px) scale(0.4) rotate(-12deg);
-            filter: blur(6px);
+            transform: translateY(40px) scale(0.92);
+            filter: blur(8px);
           }
           60% {
             opacity: 1;
-            transform: translateY(-6px) scale(1.18) rotate(3deg);
+            transform: translateY(-6px) scale(1.02);
             filter: blur(0px);
           }
           100% {
             opacity: 1;
-            transform: translateY(0) scale(1) rotate(0deg);
+            transform: translateY(0) scale(1);
             filter: blur(0px);
           }
         }
 
-        @keyframes hambaiGlowPulse {
-          0%, 100% { filter: drop-shadow(0 0 12px rgba(129, 154, 112, 0.3)); }
-          50% { filter: drop-shadow(0 0 25px rgba(129, 154, 112, 0.65)); }
+        /* Staggered Letter-by-Letter Entrance Animation for HAMBAI */
+        @keyframes hambaiLetterUp {
+          0% {
+            opacity: 0;
+            transform: translateY(20px) scale(0.5);
+          }
+          60% {
+            opacity: 1;
+            transform: translateY(-4px) scale(1.15);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
         }
 
         .hambai-char {
           display: inline-block;
-          animation: hambaiLetterUp 0.65s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+          animation: hambaiLetterUp 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
           opacity: 0;
+        }
+
+        .bell-ring-anim {
+          animation: bellRing 2s infinite ease-in-out;
+        }
+
+        @keyframes bellRing {
+          0%, 100% { transform: rotate(0deg); }
+          10%, 30% { transform: rotate(14deg); }
+          20%, 40% { transform: rotate(-14deg); }
+          50% { transform: rotate(0deg); }
         }
       `}</style>
 
       <div style={{ maxWidth: "500px", width: "100%" }}>
         
-        {/* TOP BAR: BACK BUTTON & AUTOMATIC STUDENT PROFILE DP CIRCLE */}
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "22px" }}>
+        {/* TOP BAR: RIGHT SIDE AUTOMATIC STUDENT PROFILE DP CIRCLE */}
+        <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", marginBottom: "22px" }}>
           
-          {/* Back Button */}
-          <button 
-            type="button"
-            onClick={() => window.history.back()}
-            style={{ 
-              border: "1px solid #E4EAE1", 
-              background: "#F8FAF7", 
-              borderRadius: "50%",
-              width: "42px",
-              height: "42px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              color: "#182216",
-              boxShadow: "0 2px 8px rgba(0,0,0,0.04)"
-            }}
-          >
-            <ArrowLeft size={20} />
-          </button>
-
           {/* 👤 Automatic Round Circle Profile Avatar DP */}
           <button
             type="button"
@@ -242,7 +268,7 @@ export default function ContributionPage() {
               width: "44px",
               height: "44px",
               borderRadius: "50%",
-              backgroundColor: "#819A70",
+              backgroundColor: "#89ae71",
               color: "#FFFFFF",
               fontWeight: "700",
               fontSize: "15px",
@@ -259,7 +285,7 @@ export default function ContributionPage() {
           </button>
         </div>
 
-        {/* HEADER SECTION (Matching Image Header layout) */}
+        {/* HEADER SECTION */}
         <div style={{ textAlign: "center", marginBottom: "28px" }}>
           <h1 style={{ 
             fontSize: "34px", 
@@ -268,7 +294,7 @@ export default function ContributionPage() {
             margin: "0 0 4px 0",
             letterSpacing: "-0.5px"
           }}>
-            Kokborok Word
+            KOKBOROK WORDS
           </h1>
 
           <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "10px", margin: "6px 0" }}>
@@ -323,9 +349,9 @@ export default function ContributionPage() {
             
             {/* Kokborok Label with Green Dot */}
             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
-              <span style={{ width: "8px", height: "8px", borderRadius: "50%", backgroundColor: "#819A70" }}></span>
+              <span style={{ width: "8px", height: "8px", borderRadius: "50%" }}></span>
               <label style={{ fontSize: "14px", fontWeight: "700", color: "#182216" }}>
-                KOKBOROK  WORDS
+                KOKBOROK WORD
               </label>
             </div>
 
@@ -352,22 +378,17 @@ export default function ContributionPage() {
               />
             </div>
 
-            {/* 🌳 TREE CONNECTOR LINES (Matching Image 2 Layout) */}
-            <div style={{ position: "relative", height: "26px", width: "100%" }}>
-              {/* Vertical center stem from top box */}
+            {/* 🌳 TREE CONNECTOR LINES */}
+            <div className="tree-connector-line" style={{ position: "relative", height: "26px", width: "100%" }}>
               <div style={{ position: "absolute", left: "50%", top: 0, height: "13px", width: "2px", backgroundColor: "#B2C5A4" }}></div>
-              {/* Horizontal bar across 3 branches */}
               <div style={{ position: "absolute", left: "16.66%", right: "16.66%", top: "13px", height: "2px", backgroundColor: "#B2C5A4" }}></div>
-              {/* Left drop line */}
               <div style={{ position: "absolute", left: "16.66%", top: "13px", bottom: 0, width: "2px", backgroundColor: "#B2C5A4" }}></div>
-              {/* Center drop line */}
               <div style={{ position: "absolute", left: "50%", top: "13px", bottom: 0, width: "2px", backgroundColor: "#B2C5A4" }}></div>
-              {/* Right drop line */}
               <div style={{ position: "absolute", right: "16.66%", top: "13px", bottom: 0, width: "2px", backgroundColor: "#B2C5A4" }}></div>
             </div>
 
-            {/* 3 TRANSLATION BOXES (BRANCHES WITH SCRIPT BADGES) */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px" }}>
+            {/* 3 TRANSLATION BOXES (RESPONSIVE GRID FOR MOBILE FIX) */}
+            <div className="translation-tree-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px" }}>
               
               {/* English Box */}
               <div style={{
@@ -377,11 +398,8 @@ export default function ContributionPage() {
                 padding: "12px",
                 boxShadow: "0 2px 8px rgba(0,0,0,0.02)"
               }}>
-                <div style={{ fontSize: "16px", fontWeight: "700", color: "#819A70", marginBottom: "4px" }}>
-                  
-                </div>
                 <label style={{ fontSize: "11px", fontWeight: "700", color: "#182216", display: "block", marginBottom: "6px" }}>
-                  English Word
+                  ENGLISH WORD
                 </label>
                 <input
                   type="text"
@@ -411,11 +429,8 @@ export default function ContributionPage() {
                 padding: "12px",
                 boxShadow: "0 2px 8px rgba(0,0,0,0.02)"
               }}>
-                <div style={{ fontSize: "16px", fontWeight: "700", color: "#7B61FF", marginBottom: "4px" }}>
-                  
-                </div>
                 <label style={{ fontSize: "11px", fontWeight: "700", color: "#182216", display: "block", marginBottom: "6px" }}>
-                  Hindi Word
+                  HINDI WORD
                 </label>
                 <input
                   type="text"
@@ -445,11 +460,8 @@ export default function ContributionPage() {
                 padding: "12px",
                 boxShadow: "0 2px 8px rgba(0,0,0,0.02)"
               }}>
-                <div style={{ fontSize: "16px", fontWeight: "700", color: "#E07A5F", marginBottom: "4px" }}>
-                  
-                </div>
                 <label style={{ fontSize: "11px", fontWeight: "700", color: "#182216", display: "block", marginBottom: "6px" }}>
-                  Bangali Word
+                  BANGALI WORD
                 </label>
                 <input
                   type="text"
@@ -484,9 +496,8 @@ export default function ContributionPage() {
             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
               <Layers size={18} color="#819A70" />
               <label style={{ fontSize: "14px", fontWeight: "700", color: "#182216" }}>
-                Clustering
+                CLUSTERING
               </label>
-              <span style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "#819A70" }}></span>
             </div>
 
             {/* Dropdown */}
@@ -505,7 +516,6 @@ export default function ContributionPage() {
                   fontSize: "14px",
                   outline: "none",
                   appearance: "none",
-                  cursor: "pointer"
                 }}
               >
                 <option value="Most used">Most used</option>
@@ -515,9 +525,10 @@ export default function ContributionPage() {
               <ChevronDown size={18} color="#657563" style={{ position: "absolute", right: "16px", top: "15px", pointerEvents: "none" }} />
             </div>
 
-            {/* Quick Pill Selection Buttons (Matching UI Image) */}
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px" }}>
+            {/* Quick Pill Selection Buttons */}
+            <div className="clustering-pills-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px" }}>
               
+              {/* Most Used Button */}
               <button
                 type="button"
                 onClick={() => setClustering("Most used")}
@@ -541,6 +552,7 @@ export default function ContributionPage() {
                 Most used
               </button>
 
+              {/* Average Used Button */}
               <button
                 type="button"
                 onClick={() => setClustering("Average used")}
@@ -564,6 +576,7 @@ export default function ContributionPage() {
                 Average
               </button>
 
+              {/* Rare Used Button (FIXED) */}
               <button
                 type="button"
                 onClick={() => setClustering("Rare used")}
@@ -600,9 +613,8 @@ export default function ContributionPage() {
             <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "12px" }}>
               <User size={18} color="#819A70" />
               <label style={{ fontSize: "14px", fontWeight: "700", color: "#182216" }}>
-                Contribution Name
+                CONTRIBUTOR NAME
               </label>
-              <span style={{ width: "6px", height: "6px", borderRadius: "50%", backgroundColor: "#819A70" }}></span>
             </div>
 
             <div style={{ position: "relative" }}>
@@ -628,7 +640,7 @@ export default function ContributionPage() {
             </div>
           </div>
 
-          {/* 🚀 SUBMIT BUTTON (WITH APPLE LIQUID SLIDE FILL EFFECT) */}
+          {/* 🚀 SUBMIT BUTTON */}
           <button
             type="submit"
             disabled={loading}
@@ -651,82 +663,142 @@ export default function ContributionPage() {
               gap: "8px"
             }}
           >
-            {loading ? "Submitting..." : (
-              <>
-                Submit Your Words →
-              </>
-            )}
+            {loading ? "Submitting..." : "Submit Your Words →"}
           </button>
 
         </form>
 
-        {/* 🌟 SUBMIT SUCCESSFUL -> STAGGERED LETTER-BY-LETTER "HAMBAI" ANIMATION AREA */}
-        {successMsg && (
+        {/* 🔔 INTERNATIONAL FLY-UP NOTIFICATION WITH HAMBAI + CONTRIBUTOR NAME */}
+        {showNotification && (
           <div style={{
-            marginTop: "26px",
-            padding: "24px",
+            marginTop: "20px",
+            padding: "20px",
             backgroundColor: "#F4F7F2",
             borderRadius: "24px",
             border: "1.5px solid #C4D5BA",
-            textAlign: "center",
-            boxShadow: "0 10px 25px rgba(129, 154, 112, 0.12)",
-            animation: "hambaiGlowPulse 3s infinite ease-in-out"
+            boxShadow: "0 14px 35px rgba(129, 154, 112, 0.22)",
+            animation: "flyUpNotification 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+            position: "relative"
           }}>
-            
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", marginBottom: "8px" }}>
-              <Sparkles size={18} color="#819A70" />
-              <span style={{ fontSize: "12px", fontWeight: "700", color: "#819A70", letterSpacing: "2px", textTransform: "uppercase" }}>
-                CONTRIBUTION ACCEPTED
-              </span>
-              <Sparkles size={18} color="#819A70" />
-            </div>
+            {/* Close Cross Notification */}
+            <button
+              onClick={() => setShowNotification(false)}
+              style={{
+                position: "absolute",
+                right: "14px",
+                top: "14px",
+                border: "none",
+                background: "none",
+                color: "#657563",
+                cursor: "pointer"
+              }}
+            >
+              <X size={18} />
+            </button>
 
-            {/* HAMBAI - STAGGERED ANIMATION FOR EACH LETTER */}
-            <div style={{
-              fontSize: "42px",
-              fontWeight: "900",
-              color: "#819A70",
-              letterSpacing: "6px",
-              margin: "8px 0",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "4px"
-            }}>
-              {"HAMBAI".split("").map((letter, index) => (
-                <span
-                  key={index}
-                  className="hambai-char"
-                  style={{ animationDelay: `${index * 0.12}s` }}
-                >
-                  {letter}
+            {/* Notification Bell Badge Header */}
+            <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "12px" }}>
+              <div style={{
+                position: "relative",
+                width: "38px",
+                height: "38px",
+                borderRadius: "50%",
+                backgroundColor: "#819A70",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center"
+              }}>
+                <Bell size={20} color="#FFFFFF" className="bell-ring-anim" />
+                <span style={{
+                  position: "absolute",
+                  top: "2px",
+                  right: "2px",
+                  width: "10px",
+                  height: "10px",
+                  borderRadius: "50%",
+                  backgroundColor: "#EF4444",
+                  border: "2px solid #FFFFFF"
+                }}></span>
+              </div>
+
+              <div>
+                <span style={{ fontSize: "11px", fontWeight: "800", color: "#819A70", letterSpacing: "1.5px", textTransform: "uppercase" }}>
+                  NEW CONTRIBUTION LOGGED
                 </span>
-              ))}
+                <p style={{ margin: "2px 0 0 0", fontSize: "12px", color: "#52634f", fontWeight: "600" }}>
+                  Word successfully synced!
+                </p>
+              </div>
             </div>
 
-            <p style={{ fontSize: "12px", fontWeight: "700", color: "#5F7350", textTransform: "uppercase", letterSpacing: "1px", margin: "0 0 10px 0" }}>
-              ( Thank You in Kokborok )
-            </p>
-
-            <div style={{ 
-              display: "inline-flex", 
-              alignItems: "center", 
-              gap: "6px", 
-              fontSize: "13.5px", 
-              color: "#2C3A27",
+            {/* Animated HAMBAI + Contributor Name Display */}
+            <div style={{
               backgroundColor: "#FFFFFF",
-              padding: "8px 16px",
-              borderRadius: "20px",
-              border: "1px solid #D2DFCC"
+              borderRadius: "18px",
+              padding: "16px",
+              border: "1px solid #E1EAD9",
+              textAlign: "center"
             }}>
-              <CheckCircle2 size={16} color="#819A70" />
-              <span>Word submitted for Moderator review!</span>
+              
+              <div style={{
+                fontSize: "32px",
+                fontWeight: "900",
+                color: "#819A70",
+                letterSpacing: "4px",
+                margin: "4px 0",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: "2px",
+                flexWrap: "wrap"
+              }}>
+                {/* HAMBAI Text Animated */}
+                {"HAMBAI,".split("").map((letter, index) => (
+                  <span
+                    key={index}
+                    className="hambai-char"
+                    style={{ animationDelay: `${index * 0.08}s` }}
+                  >
+                    {letter}
+                  </span>
+                ))}
+                
+                {/* Contributor Name Highlighted */}
+                <span style={{
+                  color: "#182216",
+                  marginLeft: "8px",
+                  fontSize: "26px",
+                  fontWeight: "800",
+                  textTransform: "capitalize"
+                }}>
+                  {submittedName}!
+                </span>
+              </div>
+
+              <p style={{ fontSize: "12px", fontWeight: "700", color: "#6A7D5E", margin: "2px 0 10px 0" }}>
+                ( Thank You for Contributing to Kokborok )
+              </p>
+
+              <div style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: "6px",
+                fontSize: "12.5px",
+                color: "#2C3A27",
+                backgroundColor: "#F4F7F2",
+                padding: "6px 14px",
+                borderRadius: "16px",
+                fontWeight: "600"
+              }}>
+                <CheckCircle2 size={16} color="#819A70" />
+                <span>Added under {submittedName}'s Profile</span>
+              </div>
             </div>
 
           </div>
         )}
 
-        {/* FOOTER DIVIDER LEAF (As per second screenshot) */}
+        {/* FOOTER DIVIDER LEAF */}
         <div style={{ 
           display: "flex", 
           alignItems: "center", 
@@ -741,145 +813,13 @@ export default function ContributionPage() {
 
       </div>
 
-      {/* 👤 STUDENT AUTOMATIC PROFILE MODAL POPUP */}
-      {isProfileOpen && (
-        <div style={{
-          position: "fixed",
-          inset: 0,
-          backgroundColor: "rgba(0, 0, 0, 0.5)",
-          backdropFilter: "blur(6px)",
-          zIndex: 9999,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          padding: "20px"
-        }}>
-          <div style={{
-            backgroundColor: "#FFFFFF",
-            borderRadius: "28px",
-            padding: "28px",
-            maxWidth: "360px",
-            width: "100%",
-            boxShadow: "0 20px 50px rgba(0,0,0,0.2)",
-            position: "relative",
-            border: "1px solid #E1E8DE"
-          }}>
-            {/* Close Cross */}
-            <button
-              onClick={() => setIsProfileOpen(false)}
-              style={{
-                position: "absolute",
-                right: "18px",
-                top: "18px",
-                border: "none",
-                background: "none",
-                color: "#657563",
-                cursor: "pointer"
-              }}
-            >
-              <X size={20} />
-            </button>
-
-            {/* Avatar & Header */}
-            <div style={{ textAlign: "center", marginBottom: "20px" }}>
-              <div style={{
-                width: "72px",
-                height: "72px",
-                borderRadius: "50%",
-                backgroundColor: "#819A70",
-                color: "#FFFFFF",
-                fontWeight: "800",
-                fontSize: "24px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                margin: "0 auto 12px auto",
-                boxShadow: "0 8px 20px rgba(129, 154, 112, 0.35)",
-                border: "3px solid #E8EFE5"
-              }}>
-                {getInitials()}
-              </div>
-
-              <h3 style={{ margin: "0 0 4px 0", fontSize: "18px", fontWeight: "700", color: "#182216" }}>
-                {currentUser?.displayName || currentUser?.email?.split("@")[0] || "Student Contributor"}
-              </h3>
-
-              <span style={{ 
-                fontSize: "11px", 
-                fontWeight: "700", 
-                color: "#819A70", 
-                backgroundColor: "#F2F6F0",
-                padding: "4px 12px",
-                borderRadius: "14px",
-                textTransform: "uppercase",
-                letterSpacing: "0.5px"
-              }}>
-                Verified Student
-              </span>
-            </div>
-
-            {/* Profile Info Details */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "20px" }}>
-              <div style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "12px",
-                padding: "12px 14px",
-                backgroundColor: "#F8FAF7",
-                borderRadius: "14px",
-                fontSize: "13px",
-                border: "1px solid #E5EBE3",
-                color: "#2C3A27"
-              }}>
-                <Mail size={16} color="#819A70" />
-                <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
-                  {currentUser?.email || "student@bhasa.com"}
-                </span>
-              </div>
-
-              <div style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "12px",
-                padding: "12px 14px",
-                backgroundColor: "#F8FAF7",
-                borderRadius: "14px",
-                fontSize: "13px",
-                border: "1px solid #E5EBE3",
-                color: "#2C3A27"
-              }}>
-                <ShieldCheck size={16} color="#819A70" />
-                <span>Automatic Profile Synced</span>
-              </div>
-            </div>
-
-            {/* Logout Action */}
-            <button
-              onClick={async () => {
-                if (logout) await logout();
-                setIsProfileOpen(false);
-              }}
-              style={{
-                width: "100%",
-                backgroundColor: "#FEF2F2",
-                color: "#DC2626",
-                fontWeight: "700",
-                fontSize: "14px",
-                padding: "13px",
-                borderRadius: "18px",
-                border: "1px solid #FCA5A5",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "8px"
-              }}
-            >
-              <LogOut size={16} /> Log Out
-            </button>
-          </div>
-        </div>
-      )}
+      {/* 👤 SEPARATED STUDENT PROFILE MODAL COMPONENT */}
+      <StudentProfileModal
+        isOpen={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
+        currentUser={currentUser}
+        logout={logout}
+      />
 
     </div>
   );
