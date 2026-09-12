@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { db } from "../../firebase/firebase.js";
 import { doc, getDoc } from "firebase/firestore";
 
-// 📷 File Explorer se logo import (Apne folder path ke hisab se path change kar lein)
+// 📷 File Explorer se logo import
 import logoImg from "../../assets/bhasha-logo.jpeg"; 
 
 import { 
@@ -200,21 +200,24 @@ export default function AuthPage() {
   };
 
   return (
-    <div style={{
-      minHeight: "100vh",
-      backgroundColor: "#F4F6F2",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: "16px",
-      fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif",
-      overflow: "hidden",
-      touchAction: "manipulation" // Prevents zoom gestures globally on this view
-    }}>
-      {/* Dynamic Embedded Animations & Mobile Anti-Zoom Styles */}
+    <div 
+      className="auth-container"
+      style={{
+        minHeight: "100vh",
+        backgroundColor: "#F4F6F2",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "16px",
+        fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif",
+        overflowX: "hidden",
+        touchAction: "manipulation"
+      }}
+    >
+      {/* Dynamic Embedded Animations & Mobile Full Screen CSS */}
       <style>{`
         * {
-          touch-action: manipulation; /* Prevents double-tap zoom on all elements */
+          touch-action: manipulation;
         }
         @keyframes appleFadeIn {
           from { opacity: 0; transform: scale(0.96) translateY(12px); }
@@ -234,7 +237,6 @@ export default function AuthPage() {
         .form-stagger {
           animation: inputStagger 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
-        /* Custom Input Focus Glow */
         .custom-input {
           transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
         }
@@ -244,14 +246,32 @@ export default function AuthPage() {
           background-color: #FFFFFF !important;
         }
 
-        /* 📱 Mobile Specific Rules to Stop Input Focus Zooming in iOS Safari */
+        /* 📱 MOBILE FULL SCREEN OVERRIDES */
         @media screen and (max-width: 768px) {
-          .custom-input, select, input {
-            font-size: 16px !important; /* Font size >= 16px prevents iOS Safari auto zoom on focus */
+          .auth-container {
+            padding: 0 !important;
+            background-color: #FFFFFF !important;
+            align-items: flex-start !important;
           }
           .apple-card {
-            padding: 30px 24px 0px 24px !important;
-            border-radius: 28px !important;
+            max-width: 100% !important;
+            width: 100% !important;
+            min-height: 100vh !important;
+            min-height: 100dvh !important;
+            border-radius: 0px !important;
+            border: none !important;
+            box-shadow: none !important;
+            padding: 28px 20px 0px 20px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: space-between !important;
+          }
+          .custom-input, select, input {
+            font-size: 16px !important; /* Prevents iOS Safari auto-zoom */
+          }
+          .bottom-graphic {
+            margin-left: -20px !important;
+            margin-right: -20px !important;
           }
         }
 
@@ -285,7 +305,7 @@ export default function AuthPage() {
         }
       `}</style>
 
-      {/* CARD CONTAINER */}
+      {/* CARD / CONTAINER */}
       <div 
         className="apple-card"
         style={{
@@ -297,254 +317,158 @@ export default function AuthPage() {
           width: "100%",
           border: "1px solid #E6ECE1",
           position: "relative",
-          overflow: "hidden"
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between"
         }}
       >
-        {/* LOGO AREA */}
-        <div style={{ display: "flex", justifyContent: "center", alignItems: "center", marginBottom: "22px" }}>
-          <img 
-            src={logoImg} 
-            alt="BHAShA Logo" 
-            style={{ height: "60px", maxWidth: "260px", objectFit: "contain" }}
-            onError={(e) => {
-              // Fallback UI agar image load hone me error aaye
-              e.target.style.display = 'none';
-              e.target.nextSibling.style.display = 'flex';
-            }}
-          />
-          <div style={{ display: "none", alignItems: "center", gap: "8px" }}>
-            <span style={{ fontSize: "28px", fontWeight: "900", letterSpacing: "1px", color: "#252E20", fontFamily: "serif" }}>
-              BHAShA
-            </span>
-            <span style={{ fontSize: "10px", fontWeight: "800", borderLeft: "2px solid #5E7053", paddingLeft: "8px", color: "#5E7053", lineHeight: "1.1", textTransform: "uppercase" }}>
-              THE<br/>NIELIT
-            </span>
+        {/* MAIN FORM CONTENT WRAPPER */}
+        <div>
+          {/* LOGO AREA */}
+          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", marginBottom: "22px" }}>
+            <img 
+              src={logoImg} 
+              alt="BHAShA Logo" 
+              style={{ height: "60px", maxWidth: "260px", objectFit: "contain" }}
+              onError={(e) => {
+                e.target.style.display = 'none';
+                e.target.nextSibling.style.display = 'flex';
+              }}
+            />
+            <div style={{ display: "none", alignItems: "center", gap: "8px" }}>
+              <span style={{ fontSize: "28px", fontWeight: "900", letterSpacing: "1px", color: "#252E20", fontFamily: "serif" }}>
+                BHAShA
+              </span>
+              <span style={{ fontSize: "10px", fontWeight: "800", borderLeft: "2px solid #5E7053", paddingLeft: "8px", color: "#5E7053", lineHeight: "1.1", textTransform: "uppercase" }}>
+                THE<br/>NIELIT
+              </span>
+            </div>
           </div>
-        </div>
 
-        {/* HEADER TITLE WITH ANIMATED TEXT SWITCH */}
-        <div key={`head-${animateKey}`} className="form-stagger">
-          <h2 style={{ fontSize: "26px", fontWeight: "700", color: "#232A20", textAlign: "left", margin: "0 0 6px 0", letterSpacing: "-0.5px" }}>
-            {isLogin ? (
-              <>Welcome <span style={{ color: "#5E7053" }}>Back</span></>
-            ) : (
-              <>Create Your <span style={{ color: "#5E7053" }}>Account</span></>
-            )}
-          </h2>
-          <p style={{ color: "#6A7764", textAlign: "left", fontSize: "13.5px", margin: "0 0 24px 0", fontWeight: "400", lineHeight: "1.4" }}>
-            {isLogin ? "Select your role and log in to BHAShA Portal." : "Join our community and be a part of something bigger."}
-          </p>
-        </div>
-
-        {/* ERROR BOX */}
-        {error && (
-          <div style={{
-            backgroundColor: "#FDF2F2",
-            color: "#E04848",
-            padding: "12px 14px",
-            borderRadius: "14px",
-            fontSize: "13px",
-            marginBottom: "20px",
-            border: "1px solid #F8D7D7",
-            display: "flex",
-            alignItems: "center",
-            gap: "8px"
-          }}>
-            <ShieldAlert size={18} style={{ shrink: 0 }} />
-            <span>{error}</span>
-          </div>
-        )}
-
-        {/* FORM FIELDS WITH STAGGER ANIMATION */}
-        <form onSubmit={handleSubmit} key={`form-${animateKey}`} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-          
-          {/* USER TYPE */}
-          <div className="form-stagger" style={{ animationDelay: "0.05s" }}>
-            <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#2B3428", marginBottom: "6px" }}>User Type</label>
-            <div style={{ position: "relative" }}>
+          {/* HEADER TITLE WITH ANIMATED TEXT SWITCH */}
+          <div key={`head-${animateKey}`} className="form-stagger">
+            <h2 style={{ fontSize: "26px", fontWeight: "700", color: "#232A20", textAlign: "left", margin: "0 0 6px 0", letterSpacing: "-0.5px" }}>
               {isLogin ? (
-                <select
-                  value={role}
-                  onChange={(e) => { setRole(e.target.value); setError(""); }}
-                  className="custom-input"
-                  style={{
+                <>Welcome <span style={{ color: "#5E7053" }}>Back</span></>
+              ) : (
+                <>Create Your <span style={{ color: "#5E7053" }}>Account</span></>
+              )}
+            </h2>
+            <p style={{ color: "#6A7764", textAlign: "left", fontSize: "13.5px", margin: "0 0 24px 0", fontWeight: "400", lineHeight: "1.4" }}>
+              {isLogin ? "Select your role and log in to BHAShA Portal." : "Join our community and be a part of something bigger."}
+            </p>
+          </div>
+
+          {/* ERROR BOX */}
+          {error && (
+            <div style={{
+              backgroundColor: "#FDF2F2",
+              color: "#E04848",
+              padding: "12px 14px",
+              borderRadius: "14px",
+              fontSize: "13px",
+              marginBottom: "20px",
+              border: "1px solid #F8D7D7",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px"
+            }}>
+              <ShieldAlert size={18} style={{ flexShrink: 0 }} />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {/* FORM FIELDS */}
+          <form onSubmit={handleSubmit} key={`form-${animateKey}`} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            
+            {/* USER TYPE */}
+            <div className="form-stagger" style={{ animationDelay: "0.05s" }}>
+              <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#2B3428", marginBottom: "6px" }}>User Type</label>
+              <div style={{ position: "relative" }}>
+                {isLogin ? (
+                  <select
+                    value={role}
+                    onChange={(e) => { setRole(e.target.value); setError(""); }}
+                    className="custom-input"
+                    style={{
+                      width: "100%",
+                      backgroundColor: "#F9FAFAF8",
+                      border: "1px solid #E1E7DC",
+                      color: "#2D3728",
+                      borderRadius: "16px",
+                      padding: "14px 14px 14px 44px",
+                      fontSize: "14px",
+                      fontWeight: "500",
+                      outline: "none",
+                      appearance: "none",
+                      boxSizing: "border-box",
+                      cursor: "pointer"
+                    }}
+                  >
+                    <option value="student">Students</option>
+                    <option value="moderator">Moderators</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                ) : (
+                  <div style={{
                     width: "100%",
-                    backgroundColor: "#F9FAFAF8",
+                    backgroundColor: "#F5F7F3",
                     border: "1px solid #E1E7DC",
                     color: "#2D3728",
                     borderRadius: "16px",
                     padding: "14px 14px 14px 44px",
                     fontSize: "14px",
-                    fontWeight: "500",
-                    outline: "none",
-                    appearance: "none",
-                    boxSizing: "border-box",
-                    cursor: "pointer"
-                  }}
-                >
-                  <option value="student">Students</option>
-                  <option value="moderator">Moderators</option>
-                  <option value="admin">Admin</option>
-                </select>
-              ) : (
-                <div style={{
-                  width: "100%",
-                  backgroundColor: "#F5F7F3",
-                  border: "1px solid #E1E7DC",
-                  color: "#2D3728",
-                  borderRadius: "16px",
-                  padding: "14px 14px 14px 44px",
-                  fontSize: "14px",
-                  fontWeight: "600",
-                  boxSizing: "border-box"
-                }}>
-                  Students
-                </div>
-              )}
-              <User size={19} color="#788871" style={{ position: "absolute", left: "15px", top: "15px" }} />
-              {isLogin && <ChevronDown size={18} color="#94A3B8" style={{ position: "absolute", right: "15px", top: "16px", pointerEvents: "none" }} />}
-            </div>
-          </div>
-
-          {/* FULL NAME (Signup Only) */}
-          {!isLogin && (
-            <div className="form-stagger" style={{ animationDelay: "0.1s" }}>
-              <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#2B3428", marginBottom: "6px" }}>Full Name</label>
-              <div style={{ position: "relative" }}>
-                <input
-                  type="text"
-                  required
-                  placeholder="Enter your full name"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="custom-input"
-                  style={{
-                    width: "100%",
-                    backgroundColor: "#FFFFFF",
-                    border: "1px solid #E1E7DC",
-                    borderRadius: "16px",
-                    padding: "14px 14px 14px 44px",
-                    fontSize: "14px",
-                    outline: "none",
-                    boxSizing: "border-box",
-                    color: "#2B3428"
-                  }}
-                />
+                    fontWeight: "600",
+                    boxSizing: "border-box"
+                  }}>
+                    Students
+                  </div>
+                )}
                 <User size={19} color="#788871" style={{ position: "absolute", left: "15px", top: "15px" }} />
+                {isLogin && <ChevronDown size={18} color="#94A3B8" style={{ position: "absolute", right: "15px", top: "16px", pointerEvents: "none" }} />}
               </div>
             </div>
-          )}
 
-          {/* EMAIL ADDRESS */}
-          <div className="form-stagger" style={{ animationDelay: isLogin ? "0.1s" : "0.15s" }}>
-            <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#2B3428", marginBottom: "6px" }}>Email Address</label>
-            <div style={{ position: "relative" }}>
-              <input
-                type="email"
-                required
-                placeholder="Enter your email address"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="custom-input"
-                style={{
-                  width: "100%",
-                  backgroundColor: "#FFFFFF",
-                  border: "1px solid #E1E7DC",
-                  borderRadius: "16px",
-                  padding: "14px 14px 14px 44px",
-                  fontSize: "14px",
-                  outline: "none",
-                  boxSizing: "border-box",
-                  color: "#2B3428"
-                }}
-              />
-              <Mail size={19} color="#788871" style={{ position: "absolute", left: "15px", top: "15px" }} />
-            </div>
-          </div>
-
-          {/* PASSWORD (Only for Signup OR Student Login) */}
-          {(!isLogin || (isLogin && role === "student")) && (
-            <div className="form-stagger" style={{ animationDelay: isLogin ? "0.15s" : "0.2s" }}>
-              <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#2B3428", marginBottom: "6px" }}>Password</label>
-              <div style={{ position: "relative" }}>
-                <input
-                  type={showPassword ? "text" : "password"}
-                  required
-                  placeholder={isLogin ? "Enter your password" : "Create a strong password"}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="custom-input"
-                  style={{
-                    width: "100%",
-                    backgroundColor: "#FFFFFF",
-                    border: "1px solid #E1E7DC",
-                    borderRadius: "16px",
-                    padding: "14px 44px 14px 44px",
-                    fontSize: "14px",
-                    outline: "none",
-                    boxSizing: "border-box",
-                    color: "#2B3428"
-                  }}
-                />
-                <Lock size={19} color="#788871" style={{ position: "absolute", left: "15px", top: "15px" }} />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  style={{ position: "absolute", right: "15px", top: "15px", border: "none", background: "none", cursor: "pointer", padding: 0 }}
-                >
-                  {showPassword ? <EyeOff size={19} color="#788871" /> : <Eye size={19} color="#788871" />}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* CAPTCHA (Signup Only) */}
-          {!isLogin && (
-            <div className="form-stagger" style={{ animationDelay: "0.25s" }}>
-              <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#2B3428", marginBottom: "6px" }}>Captcha Verification</label>
-              <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
-                <div style={{
-                  backgroundColor: "#161D14",
-                  color: "#FFFFFF",
-                  fontFamily: "Courier, monospace",
-                  fontSize: "20px",
-                  letterSpacing: "4px",
-                  padding: "12px",
-                  borderRadius: "14px",
-                  flex: 1,
-                  textAlign: "center",
-                  fontStyle: "italic",
-                  fontWeight: "bold",
-                  boxShadow: "inset 0 2px 4px rgba(0,0,0,0.3)"
-                }}>
-                  {captchaCode}
+            {/* FULL NAME (Signup Only) */}
+            {!isLogin && (
+              <div className="form-stagger" style={{ animationDelay: "0.1s" }}>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#2B3428", marginBottom: "6px" }}>Full Name</label>
+                <div style={{ position: "relative" }}>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Enter your full name"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    className="custom-input"
+                    style={{
+                      width: "100%",
+                      backgroundColor: "#FFFFFF",
+                      border: "1px solid #E1E7DC",
+                      borderRadius: "16px",
+                      padding: "14px 14px 14px 44px",
+                      fontSize: "14px",
+                      outline: "none",
+                      boxSizing: "border-box",
+                      color: "#2B3428"
+                    }}
+                  />
+                  <User size={19} color="#788871" style={{ position: "absolute", left: "15px", top: "15px" }} />
                 </div>
-                <button
-                  type="button"
-                  onClick={generateCaptcha}
-                  style={{
-                    padding: "12px 14px",
-                    border: "1px solid #E1E7DC",
-                    borderRadius: "14px",
-                    backgroundColor: "#FFFFFF",
-                    cursor: "pointer",
-                    color: "#5E7053",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    transition: "all 0.2s ease"
-                  }}
-                >
-                  <RefreshCw size={18} />
-                </button>
               </div>
+            )}
+
+            {/* EMAIL ADDRESS */}
+            <div className="form-stagger" style={{ animationDelay: isLogin ? "0.1s" : "0.15s" }}>
+              <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#2B3428", marginBottom: "6px" }}>Email Address</label>
               <div style={{ position: "relative" }}>
                 <input
-                  type="text"
+                  type="email"
                   required
-                  placeholder="Enter Captcha Code"
-                  value={captchaInput}
-                  onChange={(e) => setCaptchaInput(e.target.value)}
+                  placeholder="Enter your email address"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   className="custom-input"
                   style={{
                     width: "100%",
@@ -558,66 +482,170 @@ export default function AuthPage() {
                     color: "#2B3428"
                   }}
                 />
-                <ShieldCheck size={19} color="#788871" style={{ position: "absolute", left: "15px", top: "15px" }} />
+                <Mail size={19} color="#788871" style={{ position: "absolute", left: "15px", top: "15px" }} />
               </div>
             </div>
-          )}
 
-          {/* SUBMIT BUTTON WITH SLIDE FILL EFFECT */}
-          <button
-            type="submit"
-            disabled={loading}
-            className="apple-btn form-stagger"
-            style={{
-              animationDelay: isLogin ? "0.2s" : "0.3s",
-              width: "100%",
-              backgroundColor: "#5E7053",
-              color: "#FFFFFF",
-              fontWeight: "600",
-              padding: "15px",
-              borderRadius: "16px",
-              border: "none",
-              fontSize: "15px",
-              cursor: loading ? "wait" : "pointer",
-              boxShadow: "0 6px 18px rgba(94, 112, 83, 0.25)",
-              marginTop: "10px",
-              letterSpacing: "0.2px"
-            }}
-          >
-            {loading ? "Processing..." : isLogin ? (role === "student" ? "Log In →" : "Continue →") : "Sign Up →"}
-          </button>
-        </form>
+            {/* PASSWORD (Only for Signup OR Student Login) */}
+            {(!isLogin || (isLogin && role === "student")) && (
+              <div className="form-stagger" style={{ animationDelay: isLogin ? "0.15s" : "0.2s" }}>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#2B3428", marginBottom: "6px" }}>Password</label>
+                <div style={{ position: "relative" }}>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    required
+                    placeholder={isLogin ? "Enter your password" : "Create a strong password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="custom-input"
+                    style={{
+                      width: "100%",
+                      backgroundColor: "#FFFFFF",
+                      border: "1px solid #E1E7DC",
+                      borderRadius: "16px",
+                      padding: "14px 44px 14px 44px",
+                      fontSize: "14px",
+                      outline: "none",
+                      boxSizing: "border-box",
+                      color: "#2B3428"
+                    }}
+                  />
+                  <Lock size={19} color="#788871" style={{ position: "absolute", left: "15px", top: "15px" }} />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={{ position: "absolute", right: "15px", top: "15px", border: "none", background: "none", cursor: "pointer", padding: 0 }}
+                  >
+                    {showPassword ? <EyeOff size={19} color="#788871" /> : <Eye size={19} color="#788871" />}
+                  </button>
+                </div>
+              </div>
+            )}
 
-        {/* BOTTOM MODE SWITCH LINK */}
-        <p style={{ textAlign: "center", fontSize: "13.5px", color: "#6A7764", marginTop: "22px", marginBottom: "36px", fontWeight: "400" }}>
-          {isLogin ? "New to BHAShA? " : "Already have an account? "}
-          <button
-            type="button"
-            onClick={() => handleModeSwitch(!isLogin)}
-            style={{ 
-              border: "none", 
-              background: "none", 
-              color: "#46563D", 
-              fontWeight: "700", 
-              cursor: "pointer",
-              padding: "0 2px",
-              textDecoration: "underline",
-              textUnderlineOffset: "3px"
-            }}
-          >
-            {isLogin ? "Create Account" : "Log In"}
-          </button>
-        </p>
+            {/* CAPTCHA (Signup Only) */}
+            {!isLogin && (
+              <div className="form-stagger" style={{ animationDelay: "0.25s" }}>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#2B3428", marginBottom: "6px" }}>Captcha Verification</label>
+                <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
+                  <div style={{
+                    backgroundColor: "#161D14",
+                    color: "#FFFFFF",
+                    fontFamily: "Courier, monospace",
+                    fontSize: "20px",
+                    letterSpacing: "4px",
+                    padding: "12px",
+                    borderRadius: "14px",
+                    flex: 1,
+                    textAlign: "center",
+                    fontStyle: "italic",
+                    fontWeight: "bold",
+                    boxShadow: "inset 0 2px 4px rgba(0,0,0,0.3)"
+                  }}>
+                    {captchaCode}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={generateCaptcha}
+                    style={{
+                      padding: "12px 14px",
+                      border: "1px solid #E1E7DC",
+                      borderRadius: "14px",
+                      backgroundColor: "#FFFFFF",
+                      cursor: "pointer",
+                      color: "#5E7053",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      transition: "all 0.2s ease"
+                    }}
+                  >
+                    <RefreshCw size={18} />
+                  </button>
+                </div>
+                <div style={{ position: "relative" }}>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Enter Captcha Code"
+                    value={captchaInput}
+                    onChange={(e) => setCaptchaInput(e.target.value)}
+                    className="custom-input"
+                    style={{
+                      width: "100%",
+                      backgroundColor: "#FFFFFF",
+                      border: "1px solid #E1E7DC",
+                      borderRadius: "16px",
+                      padding: "14px 14px 14px 44px",
+                      fontSize: "14px",
+                      outline: "none",
+                      boxSizing: "border-box",
+                      color: "#2B3428"
+                    }}
+                  />
+                  <ShieldCheck size={19} color="#788871" style={{ position: "absolute", left: "15px", top: "15px" }} />
+                </div>
+              </div>
+            )}
+
+            {/* SUBMIT BUTTON */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="apple-btn form-stagger"
+              style={{
+                animationDelay: isLogin ? "0.2s" : "0.3s",
+                width: "100%",
+                backgroundColor: "#5E7053",
+                color: "#FFFFFF",
+                fontWeight: "600",
+                padding: "15px",
+                borderRadius: "16px",
+                border: "none",
+                fontSize: "15px",
+                cursor: loading ? "wait" : "pointer",
+                boxShadow: "0 6px 18px rgba(94, 112, 83, 0.25)",
+                marginTop: "10px",
+                letterSpacing: "0.2px"
+              }}
+            >
+              {loading ? "Processing..." : isLogin ? (role === "student" ? "Log In →" : "Continue →") : "Sign Up →"}
+            </button>
+          </form>
+
+          {/* BOTTOM MODE SWITCH LINK */}
+          <p style={{ textAlign: "center", fontSize: "13.5px", color: "#6A7764", marginTop: "22px", marginBottom: "28px", fontWeight: "400" }}>
+            {isLogin ? "New to BHAShA? " : "Already have an account? "}
+            <button
+              type="button"
+              onClick={() => handleModeSwitch(!isLogin)}
+              style={{ 
+                border: "none", 
+                background: "none", 
+                color: "#46563D", 
+                fontWeight: "700", 
+                cursor: "pointer",
+                padding: "0 2px",
+                textDecoration: "underline",
+                textUnderlineOffset: "3px"
+              }}
+            >
+              {isLogin ? "Create Account" : "Log In"}
+            </button>
+          </p>
+        </div>
 
         {/* BOTTOM LEAF MOTIF & MOUNTAIN VECTOR */}
-        <div style={{ 
-          margin: "0 -36px", 
-          padding: "24px 20px 20px 20px", 
-          backgroundColor: "#EDF2EA", 
-          textAlign: "center",
-          position: "relative",
-          overflow: "hidden"
-        }}>
+        <div 
+          className="bottom-graphic"
+          style={{ 
+            margin: "auto -36px 0 -36px", 
+            padding: "24px 20px 20px 20px", 
+            backgroundColor: "#EDF2EA", 
+            textAlign: "center",
+            position: "relative",
+            overflow: "hidden"
+          }}
+        >
           {/* Leaf Icon */}
           <div style={{ display: "flex", justifyContent: "center", marginBottom: "6px" }}>
             <Leaf size={22} color="#5E7053" />
