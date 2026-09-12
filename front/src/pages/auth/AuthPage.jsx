@@ -646,47 +646,9 @@ export default function AuthPage() {
             overflow: "hidden"
           }}
         >
-          {/* Leaf Icon */}
-          <div style={{ display: "flex", justifyContent: "center", marginBottom: "6px" }}>
-            <Leaf size={22} color="#5E7053" />
-          </div>
+         
           
-          {/* Slogan */}
-          <p style={{ 
-            fontSize: "13px", 
-            fontWeight: "600", 
-            color: "#43523C", 
-            margin: 0, 
-            lineHeight: "1.4",
-            letterSpacing: "0.2px",
-            fontStyle: "italic"
-          }}>
-            Preserving Words<br />Building Communities
-          </p>
-
-          {/* SVG Mountain Landscape Graphic */}
-          <svg 
-            viewBox="0 0 500 120" 
-            preserveAspectRatio="none" 
-            style={{ 
-              width: "100%", 
-              height: "55px", 
-              display: "block", 
-              marginTop: "12px",
-              marginBottom: "-20px"
-            }}
-          >
-            <path 
-              d="M0,60 Q120,20 250,50 T500,30 L500,120 L0,120 Z" 
-              fill="#5E7053" 
-              opacity="0.3" 
-            />
-            <path 
-              d="M0,80 Q180,40 320,70 T500,50 L500,120 L0,120 Z" 
-              fill="#3E4C36" 
-              opacity="0.6" 
-            />
-          </svg>
+          
         </div>
 
       </div>
