@@ -53,11 +53,9 @@ export default function ContributionPage() {
   // 🛑 PREVENT BACK NAVIGATION TO LOGIN/SIGNUP PAGE ON MOBILE
   // -------------------------------------------------------------
   useEffect(() => {
-    // Current history entry push karein
     window.history.pushState(null, "", window.location.href);
 
     const handlePopState = () => {
-      // User jab back press karega, dubara state push karke back action ko block kar dega
       window.history.pushState(null, "", window.location.href);
     };
 
@@ -76,7 +74,7 @@ export default function ContributionPage() {
       if (logout) {
         await logout();
       }
-      navigate("/auth"); // Seedha AuthPage par back kar dega
+      navigate("/auth");
     } catch (err) {
       setErrorMsg(err.message || "Logout failed. Please try again.");
     }
@@ -86,13 +84,11 @@ export default function ContributionPage() {
   // 🔤 SCRIPT VALIDATION HANDLERS (No Roman Script for Hindi & Bengali)
   // -------------------------------------------------------------
   const handleHindiChange = (e) => {
-    // Restrict input to Devanagari script characters + spaces only (blocks Roman English letters)
     const val = e.target.value.replace(/[^\u0900-\u097F\s]/g, "");
     setHindi(val);
   };
 
   const handleBangaliChange = (e) => {
-    // Restrict input to Bengali script characters + spaces only (blocks Roman English letters)
     const val = e.target.value.replace(/[^\u0980-\u09FF\s]/g, "");
     setBangali(val);
   };
@@ -128,7 +124,7 @@ export default function ContributionPage() {
   }, []);
 
   // -------------------------------------------------------------
-  // 🚀 SUBMIT HANDLER (Moderator + Admin Dashboard Sync Logic)
+  // 🚀 SUBMIT HANDLER (Optimized for Admin & Moderator Dashboard)
   // -------------------------------------------------------------
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -137,37 +133,33 @@ export default function ContributionPage() {
 
     const currentContributor = contributorName.trim() || "Contributor";
 
-    // Payload sending to API backend (Includes userId for student tracking)
+    // Optimized Payload format matching AdminDashboard database expectations
     const payload = {
-      kokborok_word: kokborok,
-      english_word: english,
-      hindi_word: hindi,
-      bangali_word: bangali,
+      kokborok_word: kokborok.trim(),
+      english_word: english.trim(),
+      hindi_word: hindi.trim(),
+      bangali_word: bangali.trim(),
+      bengali_word: bangali.trim(), // Dual key support for backend schema
       clustering: clustering,
       contributor_name: currentContributor,
       submitted_by_email: currentUser?.email || "anonymous@bhasa.com",
-      userId: currentUser?.uid || "" // Unique ID sent to API backend
+      userId: currentUser?.uid || "",
+      user_id: currentUser?.uid || "",
+      status: "pending", // Critical field for Admin Dashboard review queue
+      created_at: new Date().toISOString()
     };
 
     try {
-      // 🔄 Dual Fetch: Moderator and Admin Dashboard Both Receive Submitted Word
-      const [modResponse, adminResponse] = await Promise.all([
-        fetch("/api/contributions/submit", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        }),
-        fetch("/api/admin/contributions/submit", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        })
-      ]);
+      const response = await fetch("/api/contributions/submit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
 
-      const data = await modResponse.json();
+      const data = await response.json();
 
-      if (!modResponse.ok) {
-        throw new Error(data.message || "Failed to submit word to moderator server.");
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to submit word to server.");
       }
 
       // Trigger Notification on Top Right Bell Icon
