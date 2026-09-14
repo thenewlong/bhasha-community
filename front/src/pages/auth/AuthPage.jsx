@@ -2,53 +2,53 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { db } from "../../firebase/firebase.js";
-import { 
-  collection, 
-  onSnapshot, 
-  doc, 
-  updateDoc, 
-  deleteDoc, 
-  addDoc, 
-  serverTimestamp 
-} from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 
 // 📷 File Explorer se logo import
-import logoImg from "../../assets/bhasha-logo.jpeg";
+import logoImg from "../../assets/bhasha-logo.jpeg"; 
 
 import { 
-  Check, 
-  X, 
-  Search, 
-  LogOut, 
+  Mail, 
+  Lock, 
+  User, 
   RefreshCw, 
   ShieldCheck, 
-  Trash2, 
-  Filter, 
-  Clock, 
-  CheckCircle2, 
-  XCircle, 
-  BookOpen, 
-  User, 
-  Languages,
-  Sparkles
+  ChevronDown, 
+  Eye, 
+  EyeOff, 
+  ShieldAlert,
+  Leaf
 } from "lucide-react";
 
-export default function AdminDashboard() {
-  const { currentUser, logout, roleSession } = useAuth();
+export default function AuthPage() {
+  const { login, signup, setRoleSession } = useAuth();
   const navigate = useNavigate();
 
-  // State Management
-  const [contributions, setContributions] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("pending"); // 'all', 'pending', 'approved', 'rejected'
-  const [actionLoadingId, setActionLoadingId] = useState(null);
-  const [message, setMessage] = useState({ type: "", text: "" });
+  // Mode State: true = Login | false = Signup
+  const [isLogin, setIsLogin] = useState(true);
+
+  // Form Fields
+  const [role, setRole] = useState("student");
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+
+  // Captcha State
+  const [captchaInput, setCaptchaInput] = useState("");
+  const [captchaCode, setCaptchaCode] = useState("");
+
+  // UI & Animation States
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [isExiting, setIsExiting] = useState(false);
+  const [animateKey, setAnimateKey] = useState(0);
 
   // -------------------------------------------------------------
   // 📱 MOBILE ZOOM DISABLE & PREVENT PINCH / DOUBLE TAP LOGIC
   // -------------------------------------------------------------
   useEffect(() => {
+    // 1. Dynamic Meta Viewport Injection
     let viewportMeta = document.querySelector('meta[name="viewport"]');
     const originalViewportContent = viewportMeta ? viewportMeta.getAttribute("content") : null;
 
@@ -58,490 +58,587 @@ export default function AdminDashboard() {
       document.head.appendChild(viewportMeta);
     }
     
+    // Zoom block parameters set karna
     viewportMeta.setAttribute(
       "content",
       "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no"
     );
 
+    // 2. iOS Touch Multi-finger Pinch Zoom Block
+    const preventPinchZoom = (e) => {
+      if (e.touches && e.touches.length > 1) {
+        e.preventDefault();
+      }
+    };
+
+    // 3. Prevent Double-Tap Zoom in Safari/Webkit
+    let lastTouchEnd = 0;
+    const preventDoubleTapZoom = (e) => {
+      const now = new Date().getTime();
+      if (now - lastTouchEnd <= 300) {
+        e.preventDefault();
+      }
+      lastTouchEnd = now;
+    };
+
+    document.addEventListener("touchstart", preventPinchZoom, { passive: false });
+    document.addEventListener("touchend", preventDoubleTapZoom, false);
+
+    // Cleanup Jab User Dusre Page Par Jaye
     return () => {
       if (viewportMeta && originalViewportContent) {
         viewportMeta.setAttribute("content", originalViewportContent);
       }
+      document.removeEventListener("touchstart", preventPinchZoom);
+      document.removeEventListener("touchend", preventDoubleTapZoom);
     };
   }, []);
 
-  // -------------------------------------------------------------
-  // 🔄 REAL-TIME FIRESTORE LISTENER (Fetch Contributions)
-  // -------------------------------------------------------------
-  useEffect(() => {
-    setLoading(true);
-    const unsubscribe = onSnapshot(
-      collection(db, "contributions"),
-      (snapshot) => {
-        const list = snapshot.docs.map((docSnap) => ({
-          id: docSnap.id,
-          ...docSnap.data(),
-        }));
-        setContributions(list);
-        setLoading(false);
-      },
-      (error) => {
-        console.error("Error fetching contributions:", error);
-        setMessage({ type: "error", text: "Failed to load contribution requests." });
-        setLoading(false);
-      }
-    );
+  const generateCaptcha = () => {
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+    let code = "";
+    for (let i = 0; i < 6; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    setCaptchaCode(code);
+  };
 
-    return () => unsubscribe();
+  useEffect(() => {
+    generateCaptcha();
   }, []);
 
-  // -------------------------------------------------------------
-  // ✅ APPROVE WORD FUNCTION
-  // -------------------------------------------------------------
-  const handleApprove = async (item) => {
-    setActionLoadingId(item.id);
+  const handleModeSwitch = (loginMode) => {
+    setError("");
+    setIsLogin(loginMode);
+    setAnimateKey((prev) => prev + 1); // Trigger form animation on mode switch
+    if (!loginMode) setRole("student");
+  };
+
+  // Firestore Email Checker for Admin / Moderator
+  const verifyAuthorizedUser = async (collectionName, userEmail) => {
     try {
-      // 1. Mark status as Approved in 'contributions' collection
-      const contributionRef = doc(db, "contributions", item.id);
-      await updateDoc(contributionRef, {
-        status: "approved",
-        approvedBy: currentUser?.email || roleSession?.email || "Admin",
-        approvedAt: serverTimestamp(),
-      });
-
-      // 2. Add approved word into main dictionary collection ('approved_dictionary')
-      await addDoc(collection(db, "approved_dictionary"), {
-        kokborok_word: item.kokborok_word || "",
-        english_word: item.english_word || "",
-        hindi_word: item.hindi_word || "",
-        contributedBy: item.submittedBy || item.userEmail || "Anonymous",
-        approvedBy: currentUser?.email || roleSession?.email || "Admin",
-        createdAt: serverTimestamp(),
-      });
-
-      setMessage({ type: "success", text: `Word "${item.kokborok_word}" approved successfully!` });
+      const formattedEmail = userEmail.trim().toLowerCase();
+      const docRef = doc(db, collectionName, formattedEmail);
+      const docSnap = await getDoc(docRef);
+      return docSnap.exists();
     } catch (err) {
-      console.error("Approval Error:", err);
-      setMessage({ type: "error", text: "Failed to approve the word." });
-    } finally {
-      setActionLoadingId(null);
+      console.error("Firestore Permission Error:", err);
+      throw new Error("Permission Denied: Firestore verification failed.");
     }
   };
 
-  // -------------------------------------------------------------
-  // ❌ REJECT WORD FUNCTION
-  // -------------------------------------------------------------
-  const handleReject = async (id, word) => {
-    setActionLoadingId(id);
-    try {
-      const contributionRef = doc(db, "contributions", id);
-      await updateDoc(contributionRef, {
-        status: "rejected",
-        rejectedBy: currentUser?.email || roleSession?.email || "Admin",
-        rejectedAt: serverTimestamp(),
-      });
-
-      setMessage({ type: "success", text: `Word "${word}" rejected.` });
-    } catch (err) {
-      console.error("Rejection Error:", err);
-      setMessage({ type: "error", text: "Failed to reject the word." });
-    } finally {
-      setActionLoadingId(null);
-    }
+  // Helper for Apple-style Exit Navigation
+  const animateAndNavigate = (targetPath) => {
+    setIsExiting(true);
+    setTimeout(() => {
+      navigate(targetPath);
+    }, 450); // Delay for smooth Apple scale-out animation
   };
 
-  // -------------------------------------------------------------
-  // 🗑️ DELETE WORD FUNCTION
-  // -------------------------------------------------------------
-  const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to permanently delete this contribution?")) return;
-    setActionLoadingId(id);
+  // Form Submission Logic
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+    setLoading(true);
+
     try {
-      await deleteDoc(doc(db, "contributions", id));
-      setMessage({ type: "success", text: "Contribution deleted permanently." });
+      if (isLogin) {
+        // --- 1. STUDENT LOGIN (Email + Password) ---
+        if (role === "student") {
+          if (!password) {
+            setLoading(false);
+            return setError("Please enter your password.");
+          }
+          await login(email, password);
+          animateAndNavigate("/contribution");
+
+        // --- 2. MODERATOR LOGIN (Email Only -> Firestore Check) ---
+        } else if (role === "moderator") {
+          if (!email) {
+            setLoading(false);
+            return setError("Please enter your email address.");
+          }
+          const isAllowed = await verifyAuthorizedUser("allowed_moderator", email);
+          if (!isAllowed) {
+            setLoading(false);
+            return setError("Access Denied! Your email is not registered in allowed_moderator.");
+          }
+          
+          setRoleSession(email.trim().toLowerCase(), "moderator");
+          animateAndNavigate("/moderator");
+
+        // --- 3. ADMIN LOGIN (Email Only -> Firestore Check -> AdminDashboard) ---
+        } else if (role === "admin") {
+          if (!email) {
+            setLoading(false);
+            return setError("Please enter your email address.");
+          }
+          const isAllowed = await verifyAuthorizedUser("allowed_admins", email);
+          if (!isAllowed) {
+            setLoading(false);
+            return setError("Access Denied! Your email is not registered in allowed_admins.");
+          }
+
+          setRoleSession(email.trim().toLowerCase(), "admin");
+          animateAndNavigate("/admin-dashboard");
+        }
+
+      } else {
+        // --- 4. STUDENT SIGNUP ---
+        if (captchaInput !== captchaCode) {
+          setLoading(false);
+          return setError("Captcha code does not match!");
+        }
+
+        await signup(email, password, fullName);
+        animateAndNavigate("/contribution");
+      }
     } catch (err) {
-      console.error("Delete Error:", err);
-      setMessage({ type: "error", text: "Failed to delete item." });
-    } finally {
-      setActionLoadingId(null);
+      setError(err.message ? err.message.replace("Firebase:", "").trim() : "Authentication failed.");
+      setLoading(false);
     }
   };
-
-  // -------------------------------------------------------------
-  // 🚪 LOGOUT FUNCTION
-  // -------------------------------------------------------------
-  const handleLogout = async () => {
-    try {
-      if (logout) await logout();
-      navigate("/");
-    } catch (err) {
-      console.error("Logout error:", err);
-    }
-  };
-
-  // 🔍 Filter Logic
-  const filteredContributions = contributions.filter((item) => {
-    const matchesStatus = statusFilter === "all" ? true : (item.status || "pending") === statusFilter;
-    const matchesSearch = 
-      (item.kokborok_word || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (item.english_word || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (item.hindi_word || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (item.submittedBy || item.userEmail || "").toLowerCase().includes(searchTerm.toLowerCase());
-
-    return matchesStatus && matchesSearch;
-  });
-
-  // Dynamic Statistics
-  const totalCount = contributions.length;
-  const pendingCount = contributions.filter((c) => (c.status || "pending") === "pending").length;
-  const approvedCount = contributions.filter((c) => c.status === "approved").length;
-  const rejectedCount = contributions.filter((c) => c.status === "rejected").length;
 
   return (
-    <div style={{
-      minHeight: "100vh",
-      backgroundColor: "#F4F6F2",
-      fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif",
-      color: "#2D3728",
-      padding: "20px 16px"
-    }}>
+    <div 
+      className="auth-container"
+      style={{
+        minHeight: "100vh",
+        backgroundColor: "#F4F6F2",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "16px",
+        fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif",
+        overflowX: "hidden",
+        touchAction: "manipulation"
+      }}
+    >
+      {/* Dynamic Embedded Animations & Mobile Full Screen CSS */}
       <style>{`
-        * { touch-action: manipulation; }
+        * {
+          touch-action: manipulation;
+        }
+        @keyframes appleFadeIn {
+          from { opacity: 0; transform: scale(0.96) translateY(12px); }
+          to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        @keyframes appleExit {
+          from { opacity: 1; transform: scale(1); filter: blur(0px); }
+          to { opacity: 0; transform: scale(0.92) translateY(-10px); filter: blur(6px); }
+        }
+        @keyframes inputStagger {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
         .apple-card {
-          background: #FFFFFF;
-          border-radius: 24px;
-          border: 1px solid #E6ECE1;
-          box-shadow: 0 10px 30px rgba(45, 55, 40, 0.04);
-          transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+          animation: ${isExiting ? "appleExit 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards" : "appleFadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards"};
         }
-        .apple-btn {
-          transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-          cursor: pointer;
+        .form-stagger {
+          animation: inputStagger 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
-        .apple-btn:active { transform: scale(0.96); }
+        .custom-input {
+          transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
         .custom-input:focus {
           border-color: #5E7053 !important;
           box-shadow: 0 0 0 4px rgba(94, 112, 83, 0.15) !important;
+          background-color: #FFFFFF !important;
         }
+
+        /* 📱 MOBILE FULL SCREEN OVERRIDES */
         @media screen and (max-width: 768px) {
-          .hide-mobile { display: none !important; }
-          .stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
+          .auth-container {
+            padding: 0 !important;
+            background-color: #FFFFFF !important;
+            align-items: flex-start !important;
+          }
+          .apple-card {
+            max-width: 100% !important;
+            width: 100% !important;
+            min-height: 100vh !important;
+            min-height: 100dvh !important;
+            border-radius: 0px !important;
+            border: none !important;
+            box-shadow: none !important;
+            padding: 28px 20px 0px 20px !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: space-between !important;
+          }
+          .custom-input, select, input {
+            font-size: 16px !important; /* Prevents iOS Safari auto-zoom */
+          }
+          .bottom-graphic {
+            margin-left: -20px !important;
+            margin-right: -20px !important;
+          }
+        }
+
+        /* Apple-style Liquid Slide Fill Button */
+        .apple-btn {
+          position: relative;
+          overflow: hidden;
+          z-index: 1;
+          transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease;
+        }
+        .apple-btn::before {
+          content: "";
+          position: absolute;
+          top: 0;
+          left: -100%;
+          width: 100%;
+          height: 100%;
+          background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.25), transparent);
+          transition: left 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+          z-index: 2;
+        }
+        .apple-btn:hover::before {
+          left: 100%;
+        }
+        .apple-btn:hover {
+          transform: translateY(-1.5px);
+          box-shadow: 0 8px 24px rgba(94, 112, 83, 0.35) !important;
+        }
+        .apple-btn:active {
+          transform: scale(0.98);
         }
       `}</style>
 
-      {/* --- HEADER NAV BAR --- */}
-      <div className="apple-card" style={{ padding: "16px 24px", marginBottom: "24px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "12px" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-          <img 
-            src={logoImg} 
-            alt="BHAShA Logo" 
-            style={{ height: "42px", objectFit: "contain" }}
-            onError={(e) => { e.target.style.display = 'none'; }}
-          />
-          <div>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <h1 style={{ fontSize: "20px", fontWeight: "700", color: "#232A20", margin: 0, letterSpacing: "-0.5px" }}>Admin Portal</h1>
-              <span style={{ backgroundColor: "#5E7053", color: "#FFFFFF", fontSize: "11px", fontWeight: "700", padding: "2px 8px", borderRadius: "12px", textTransform: "uppercase" }}>
-                Full Access
+      {/* CARD / CONTAINER */}
+      <div 
+        className="apple-card"
+        style={{
+          backgroundColor: "#FFFFFF",
+          borderRadius: "32px",
+          boxShadow: "0 20px 50px rgba(45, 55, 40, 0.08)",
+          padding: "40px 36px 0px 36px",
+          maxWidth: "420px",
+          width: "100%",
+          border: "1px solid #E6ECE1",
+          position: "relative",
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between"
+        }}
+      >
+        {/* MAIN FORM CONTENT WRAPPER */}
+        <div>
+          {/* LOGO AREA */}
+          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", marginBottom: "22px" }}>
+            <img 
+              src={logoImg} 
+              alt="BHAShA Logo" 
+              style={{ height: "60px", maxWidth: "260px", objectFit: "contain" }}
+              onError={(e) => {
+                e.target.style.display = 'none';
+                e.target.nextSibling.style.display = 'flex';
+              }}
+            />
+            <div style={{ display: "none", alignItems: "center", gap: "8px" }}>
+              <span style={{ fontSize: "28px", fontWeight: "900", letterSpacing: "1px", color: "#252E20", fontFamily: "serif" }}>
+                BHAShA
+              </span>
+              <span style={{ fontSize: "10px", fontWeight: "800", borderLeft: "2px solid #5E7053", paddingLeft: "8px", color: "#5E7053", lineHeight: "1.1", textTransform: "uppercase" }}>
+                THE<br/>NIELIT
               </span>
             </div>
-            <p style={{ fontSize: "12px", color: "#6A7764", margin: 0 }}>Review and moderate multi-language word contributions</p>
           </div>
-        </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-          <span className="hide-mobile" style={{ fontSize: "13px", color: "#5E7053", fontWeight: "600", backgroundColor: "#EBF0E8", padding: "8px 14px", borderRadius: "14px" }}>
-            👤 {roleSession?.email || currentUser?.email || "Admin User"}
-          </span>
-          <button
-            onClick={handleLogout}
-            className="apple-btn"
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "6px",
+          {/* HEADER TITLE WITH ANIMATED TEXT SWITCH */}
+          <div key={`head-${animateKey}`} className="form-stagger">
+            <h2 style={{ fontSize: "26px", fontWeight: "700", color: "#232A20", textAlign: "left", margin: "0 0 6px 0", letterSpacing: "-0.5px" }}>
+              {isLogin ? (
+                <>Welcome <span style={{ color: "#5E7053" }}>Back</span></>
+              ) : (
+                <>Create Your <span style={{ color: "#5E7053" }}>Account</span></>
+              )}
+            </h2>
+            <p style={{ color: "#6A7764", textAlign: "left", fontSize: "13.5px", margin: "0 0 24px 0", fontWeight: "400", lineHeight: "1.4" }}>
+              {isLogin ? "Select your role and log in to BHAShA Portal." : "Join our community and be a part of something bigger."}
+            </p>
+          </div>
+
+          {/* ERROR BOX */}
+          {error && (
+            <div style={{
               backgroundColor: "#FDF2F2",
               color: "#E04848",
-              border: "1px solid #F8D7D7",
-              padding: "9px 16px",
+              padding: "12px 14px",
               borderRadius: "14px",
-              fontWeight: "600",
-              fontSize: "13px"
-            }}
-          >
-            <LogOut size={16} /> Logout
-          </button>
-        </div>
-      </div>
+              fontSize: "13px",
+              marginBottom: "20px",
+              border: "1px solid #F8D7D7",
+              display: "flex",
+              alignItems: "center",
+              gap: "8px"
+            }}>
+              <ShieldAlert size={18} style={{ flexShrink: 0 }} />
+              <span>{error}</span>
+            </div>
+          )}
 
-      {/* --- ALERT / NOTIFICATION MESSAGE --- */}
-      {message.text && (
-        <div style={{
-          backgroundColor: message.type === "error" ? "#FDF2F2" : "#F0F7EC",
-          color: message.type === "error" ? "#E04848" : "#46563D",
-          border: `1px solid ${message.type === "error" ? "#F8D7D7" : "#D4E2CD"}`,
-          padding: "12px 18px",
-          borderRadius: "16px",
-          marginBottom: "20px",
-          display: "flex",
-          justify: "space-between",
-          alignItems: "center",
-          fontSize: "14px"
-        }}>
-          <span>{message.text}</span>
-          <button onClick={() => setMessage({ type: "", text: "" })} style={{ border: "none", background: "none", cursor: "pointer", color: "inherit", fontWeight: "bold" }}>✕</button>
-        </div>
-      )}
+          {/* FORM FIELDS */}
+          <form onSubmit={handleSubmit} key={`form-${animateKey}`} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            
+            {/* USER TYPE */}
+            <div className="form-stagger" style={{ animationDelay: "0.05s" }}>
+              <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#2B3428", marginBottom: "6px" }}>User Type</label>
+              <div style={{ position: "relative" }}>
+                {isLogin ? (
+                  <select
+                    value={role}
+                    onChange={(e) => { setRole(e.target.value); setError(""); }}
+                    className="custom-input"
+                    style={{
+                      width: "100%",
+                      backgroundColor: "#F9FAFAF8",
+                      border: "1px solid #E1E7DC",
+                      color: "#2D3728",
+                      borderRadius: "16px",
+                      padding: "14px 14px 14px 44px",
+                      fontSize: "14px",
+                      fontWeight: "500",
+                      outline: "none",
+                      appearance: "none",
+                      boxSizing: "border-box",
+                      cursor: "pointer"
+                    }}
+                  >
+                    <option value="student">Students</option>
+                    <option value="moderator">Moderators</option>
+                    <option value="admin">Admin</option>
+                  </select>
+                ) : (
+                  <div style={{
+                    width: "100%",
+                    backgroundColor: "#F5F7F3",
+                    border: "1px solid #E1E7DC",
+                    color: "#2D3728",
+                    borderRadius: "16px",
+                    padding: "14px 14px 14px 44px",
+                    fontSize: "14px",
+                    fontWeight: "600",
+                    boxSizing: "border-box"
+                  }}>
+                    Students
+                  </div>
+                )}
+                <User size={19} color="#788871" style={{ position: "absolute", left: "15px", top: "15px" }} />
+                {isLogin && <ChevronDown size={18} color="#94A3B8" style={{ position: "absolute", right: "15px", top: "16px", pointerEvents: "none" }} />}
+              </div>
+            </div>
 
-      {/* --- DASHBOARD STATS CARDS --- */}
-      <div className="stats-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "16px", marginBottom: "24px" }}>
-        <div className="apple-card" style={{ padding: "18px", display: "flex", alignItems: "center", gap: "14px" }}>
-          <div style={{ backgroundColor: "#EBF0E8", color: "#5E7053", padding: "12px", borderRadius: "16px" }}><BookOpen size={24} /></div>
-          <div>
-            <div style={{ fontSize: "22px", fontWeight: "800", color: "#232A20" }}>{totalCount}</div>
-            <div style={{ fontSize: "12px", color: "#6A7764", fontWeight: "500" }}>Total Submitted</div>
-          </div>
-        </div>
+            {/* FULL NAME (Signup Only) */}
+            {!isLogin && (
+              <div className="form-stagger" style={{ animationDelay: "0.1s" }}>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#2B3428", marginBottom: "6px" }}>Full Name</label>
+                <div style={{ position: "relative" }}>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Enter your full name"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    className="custom-input"
+                    style={{
+                      width: "100%",
+                      backgroundColor: "#FFFFFF",
+                      border: "1px solid #E1E7DC",
+                      borderRadius: "16px",
+                      padding: "14px 14px 14px 44px",
+                      fontSize: "14px",
+                      outline: "none",
+                      boxSizing: "border-box",
+                      color: "#2B3428"
+                    }}
+                  />
+                  <User size={19} color="#788871" style={{ position: "absolute", left: "15px", top: "15px" }} />
+                </div>
+              </div>
+            )}
 
-        <div className="apple-card" style={{ padding: "18px", display: "flex", alignItems: "center", gap: "14px" }}>
-          <div style={{ backgroundColor: "#FEF9C3", color: "#854D0E", padding: "12px", borderRadius: "16px" }}><Clock size={24} /></div>
-          <div>
-            <div style={{ fontSize: "22px", fontWeight: "800", color: "#854D0E" }}>{pendingCount}</div>
-            <div style={{ fontSize: "12px", color: "#854D0E", fontWeight: "600" }}>Pending Approval</div>
-          </div>
-        </div>
+            {/* EMAIL ADDRESS */}
+            <div className="form-stagger" style={{ animationDelay: isLogin ? "0.1s" : "0.15s" }}>
+              <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#2B3428", marginBottom: "6px" }}>Email Address</label>
+              <div style={{ position: "relative" }}>
+                <input
+                  type="email"
+                  required
+                  placeholder="Enter your email address"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="custom-input"
+                  style={{
+                    width: "100%",
+                    backgroundColor: "#FFFFFF",
+                    border: "1px solid #E1E7DC",
+                    borderRadius: "16px",
+                    padding: "14px 14px 14px 44px",
+                    fontSize: "14px",
+                    outline: "none",
+                    boxSizing: "border-box",
+                    color: "#2B3428"
+                  }}
+                />
+                <Mail size={19} color="#788871" style={{ position: "absolute", left: "15px", top: "15px" }} />
+              </div>
+            </div>
 
-        <div className="apple-card" style={{ padding: "18px", display: "flex", alignItems: "center", gap: "14px" }}>
-          <div style={{ backgroundColor: "#DCFCE7", color: "#166534", padding: "12px", borderRadius: "16px" }}><CheckCircle2 size={24} /></div>
-          <div>
-            <div style={{ fontSize: "22px", fontWeight: "800", color: "#166534" }}>{approvedCount}</div>
-            <div style={{ fontSize: "12px", color: "#166534", fontWeight: "600" }}>Approved Words</div>
-          </div>
-        </div>
+            {/* PASSWORD (Only for Signup OR Student Login) */}
+            {(!isLogin || (isLogin && role === "student")) && (
+              <div className="form-stagger" style={{ animationDelay: isLogin ? "0.15s" : "0.2s" }}>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#2B3428", marginBottom: "6px" }}>Password</label>
+                <div style={{ position: "relative" }}>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    required
+                    placeholder={isLogin ? "Enter your password" : "Create a strong password"}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="custom-input"
+                    style={{
+                      width: "100%",
+                      backgroundColor: "#FFFFFF",
+                      border: "1px solid #E1E7DC",
+                      borderRadius: "16px",
+                      padding: "14px 44px 14px 44px",
+                      fontSize: "14px",
+                      outline: "none",
+                      boxSizing: "border-box",
+                      color: "#2B3428"
+                    }}
+                  />
+                  <Lock size={19} color="#788871" style={{ position: "absolute", left: "15px", top: "15px" }} />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={{ position: "absolute", right: "15px", top: "15px", border: "none", background: "none", cursor: "pointer", padding: 0 }}
+                  >
+                    {showPassword ? <EyeOff size={19} color="#788871" /> : <Eye size={19} color="#788871" />}
+                  </button>
+                </div>
+              </div>
+            )}
 
-        <div className="apple-card" style={{ padding: "18px", display: "flex", alignItems: "center", gap: "14px" }}>
-          <div style={{ backgroundColor: "#FEE2E2", color: "#991B1B", padding: "12px", borderRadius: "16px" }}><XCircle size={24} /></div>
-          <div>
-            <div style={{ fontSize: "22px", fontWeight: "800", color: "#991B1B" }}>{rejectedCount}</div>
-            <div style={{ fontSize: "12px", color: "#991B1B", fontWeight: "600" }}>Rejected Entries</div>
-          </div>
-        </div>
-      </div>
+            {/* CAPTCHA (Signup Only) */}
+            {!isLogin && (
+              <div className="form-stagger" style={{ animationDelay: "0.25s" }}>
+                <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#2B3428", marginBottom: "6px" }}>Captcha Verification</label>
+                <div style={{ display: "flex", gap: "10px", marginBottom: "10px" }}>
+                  <div style={{
+                    backgroundColor: "#161D14",
+                    color: "#FFFFFF",
+                    fontFamily: "Courier, monospace",
+                    fontSize: "20px",
+                    letterSpacing: "4px",
+                    padding: "12px",
+                    borderRadius: "14px",
+                    flex: 1,
+                    textAlign: "center",
+                    fontStyle: "italic",
+                    fontWeight: "bold",
+                    boxShadow: "inset 0 2px 4px rgba(0,0,0,0.3)"
+                  }}>
+                    {captchaCode}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={generateCaptcha}
+                    style={{
+                      padding: "12px 14px",
+                      border: "1px solid #E1E7DC",
+                      borderRadius: "14px",
+                      backgroundColor: "#FFFFFF",
+                      cursor: "pointer",
+                      color: "#5E7053",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      transition: "all 0.2s ease"
+                    }}
+                  >
+                    <RefreshCw size={18} />
+                  </button>
+                </div>
+                <div style={{ position: "relative" }}>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Enter Captcha Code"
+                    value={captchaInput}
+                    onChange={(e) => setCaptchaInput(e.target.value)}
+                    className="custom-input"
+                    style={{
+                      width: "100%",
+                      backgroundColor: "#FFFFFF",
+                      border: "1px solid #E1E7DC",
+                      borderRadius: "16px",
+                      padding: "14px 14px 14px 44px",
+                      fontSize: "14px",
+                      outline: "none",
+                      boxSizing: "border-box",
+                      color: "#2B3428"
+                    }}
+                  />
+                  <ShieldCheck size={19} color="#788871" style={{ position: "absolute", left: "15px", top: "15px" }} />
+                </div>
+              </div>
+            )}
 
-      {/* --- SEARCH & FILTER CONTROLS BAR --- */}
-      <div className="apple-card" style={{ padding: "18px 24px", marginBottom: "20px", display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "14px" }}>
-        
-        {/* Search Bar */}
-        <div style={{ position: "relative", flex: 1, minWidth: "260px" }}>
-          <input
-            type="text"
-            placeholder="Search Kokborok, English, Hindi, or Contributor..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="custom-input"
-            style={{
-              width: "100%",
-              backgroundColor: "#F9FAFAF8",
-              border: "1px solid #E1E7DC",
-              borderRadius: "16px",
-              padding: "12px 14px 12px 42px",
-              fontSize: "14px",
-              outline: "none",
-              boxSizing: "border-box"
-            }}
-          />
-          <Search size={18} color="#788871" style={{ position: "absolute", left: "14px", top: "13px" }} />
-        </div>
-
-        {/* Status Filter Buttons */}
-        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-          {[
-            { id: "pending", label: "Pending" },
-            { id: "approved", label: "Approved" },
-            { id: "rejected", label: "Rejected" },
-            { id: "all", label: "All Contributions" },
-          ].map((tab) => (
+            {/* SUBMIT BUTTON */}
             <button
-              key={tab.id}
-              onClick={() => setStatusFilter(tab.id)}
-              className="apple-btn"
+              type="submit"
+              disabled={loading}
+              className="apple-btn form-stagger"
               style={{
-                padding: "10px 16px",
-                borderRadius: "14px",
-                fontSize: "13px",
+                animationDelay: isLogin ? "0.2s" : "0.3s",
+                width: "100%",
+                backgroundColor: "#5E7053",
+                color: "#FFFFFF",
                 fontWeight: "600",
+                padding: "15px",
+                borderRadius: "16px",
                 border: "none",
-                backgroundColor: statusFilter === tab.id ? "#5E7053" : "#EBF0E8",
-                color: statusFilter === tab.id ? "#FFFFFF" : "#5E7053",
+                fontSize: "15px",
+                cursor: loading ? "wait" : "pointer",
+                boxShadow: "0 6px 18px rgba(94, 112, 83, 0.25)",
+                marginTop: "10px",
+                letterSpacing: "0.2px"
               }}
             >
-              {tab.label}
+              {loading ? "Processing..." : isLogin ? (role === "student" ? "Log In →" : "Continue →") : "Sign Up →"}
             </button>
-          ))}
+          </form>
+
+          {/* BOTTOM MODE SWITCH LINK */}
+          <p style={{ textAlign: "center", fontSize: "13.5px", color: "#6A7764", marginTop: "22px", marginBottom: "28px", fontWeight: "400" }}>
+            {isLogin ? "New to BHAShA? " : "Already have an account? "}
+            <button
+              type="button"
+              onClick={() => handleModeSwitch(!isLogin)}
+              style={{ 
+                border: "none", 
+                background: "none", 
+                color: "#46563D", 
+                fontWeight: "700", 
+                cursor: "pointer",
+                padding: "0 2px",
+                textDecoration: "underline",
+                textUnderlineOffset: "3px"
+              }}
+            >
+              {isLogin ? "Create Account" : "Log In"}
+            </button>
+          </p>
+       
+
+        
+          
+          
         </div>
-      </div>
 
-      {/* --- CONTRIBUTIONS DATA TABLE --- */}
-      <div className="apple-card" style={{ overflow: "hidden" }}>
-        <div style={{ overflowX: "auto" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "14px" }}>
-            <thead>
-              <tr style={{ backgroundColor: "#F8FAF7", borderBottom: "1px solid #E6ECE1", color: "#5E7053", fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.5px" }}>
-                <th style={{ padding: "16px 20px" }}>Kokborok Word</th>
-                <th style={{ padding: "16px 20px" }}>English Meaning</th>
-                <th style={{ padding: "16px 20px" }}>Hindi Meaning</th>
-                <th style={{ padding: "16px 20px" }}>Submitted By</th>
-                <th style={{ padding: "16px 20px" }}>Status</th>
-                <th style={{ padding: "16px 20px", textAlign: "right" }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td colSpan="6" style={{ textAlign: "center", padding: "40px", color: "#6A7764" }}>
-                    <RefreshCw size={24} className="spin" style={{ animation: "spin 1s linear infinite", marginBottom: "8px" }} />
-                    <div>Loading submissions...</div>
-                  </td>
-                </tr>
-              ) : filteredContributions.length === 0 ? (
-                <tr>
-                  <td colSpan="6" style={{ textAlign: "center", padding: "40px", color: "#6A7764" }}>
-                    <Sparkles size={28} color="#5E7053" style={{ marginBottom: "8px" }} />
-                    <div style={{ fontWeight: "600", fontSize: "15px" }}>No contributions found</div>
-                    <div style={{ fontSize: "13px" }}>Try changing your search or filter options.</div>
-                  </td>
-                </tr>
-              ) : (
-                filteredContributions.map((item) => {
-                  const currentStatus = item.status || "pending";
-                  const isPending = currentStatus === "pending";
-
-                  return (
-                    <tr key={item.id} style={{ borderBottom: "1px solid #F0F4EE", transition: "background-color 0.2s" }}>
-                      
-                      {/* Kokborok Word */}
-                      <td style={{ padding: "16px 20px", fontWeight: "700", color: "#232A20" }}>
-                        {item.kokborok_word || "—"}
-                      </td>
-
-                      {/* English Meaning */}
-                      <td style={{ padding: "16px 20px", color: "#46563D" }}>
-                        {item.english_word || "—"}
-                      </td>
-
-                      {/* Hindi Meaning */}
-                      <td style={{ padding: "16px 20px", color: "#46563D" }}>
-                        {item.hindi_word || "—"}
-                      </td>
-
-                      {/* Submitter */}
-                      <td style={{ padding: "16px 20px", fontSize: "13px", color: "#6A7764" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                          <User size={14} color="#788871" />
-                          <span>{item.submittedBy || item.userEmail || "Anonymous"}</span>
-                        </div>
-                      </td>
-
-                      {/* Status Badge */}
-                      <td style={{ padding: "16px 20px" }}>
-                        <span style={{
-                          display: "inline-block",
-                          padding: "4px 10px",
-                          borderRadius: "12px",
-                          fontSize: "12px",
-                          fontWeight: "700",
-                          textTransform: "capitalize",
-                          backgroundColor: 
-                            currentStatus === "approved" ? "#DCFCE7" :
-                            currentStatus === "rejected" ? "#FEE2E2" : "#FEF9C3",
-                          color: 
-                            currentStatus === "approved" ? "#166534" :
-                            currentStatus === "rejected" ? "#991B1B" : "#854D0E",
-                        }}>
-                          {currentStatus}
-                        </span>
-                      </td>
-
-                      {/* Action Buttons */}
-                      <td style={{ padding: "16px 20px", textAlign: "right" }}>
-                        <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
-                          
-                          {/* Approve Button */}
-                          {isPending && (
-                            <button
-                              onClick={() => handleApprove(item)}
-                              disabled={actionLoadingId === item.id}
-                              className="apple-btn"
-                              title="Approve Word"
-                              style={{
-                                backgroundColor: "#5E7053",
-                                color: "#FFFFFF",
-                                border: "none",
-                                padding: "8px 12px",
-                                borderRadius: "12px",
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "4px",
-                                fontSize: "12px",
-                                fontWeight: "600"
-                              }}
-                            >
-                              <Check size={15} /> Approve
-                            </button>
-                          )}
-
-                          {/* Reject Button */}
-                          {isPending && (
-                            <button
-                              onClick={() => handleReject(item.id, item.kokborok_word)}
-                              disabled={actionLoadingId === item.id}
-                              className="apple-btn"
-                              title="Reject Word"
-                              style={{
-                                backgroundColor: "#FDF2F2",
-                                color: "#E04848",
-                                border: "1px solid #F8D7D7",
-                                padding: "8px 12px",
-                                borderRadius: "12px",
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "4px",
-                                fontSize: "12px",
-                                fontWeight: "600"
-                              }}
-                            >
-                              <X size={15} /> Reject
-                            </button>
-                          )}
-
-                          {/* Delete Button */}
-                          <button
-                            onClick={() => handleDelete(item.id)}
-                            disabled={actionLoadingId === item.id}
-                            className="apple-btn"
-                            title="Delete Entry"
-                            style={{
-                              backgroundColor: "#F4F6F2",
-                              color: "#6A7764",
-                              border: "1px solid #E1E7DC",
-                              padding: "8px 10px",
-                              borderRadius: "12px",
-                              display: "flex",
-                              alignItems: "center"
-                            }}
-                          >
-                            <Trash2 size={15} />
-                          </button>
-
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
       </div>
     </div>
   );

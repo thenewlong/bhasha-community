@@ -780,40 +780,48 @@ export default function AdminDashboard() {
                 </select>
               </div>
 
-              <div>
-                <label style={{ fontSize: "12px", fontWeight: "600", color: "#475569" }}>Status</label>
-                <select
-                  value={selectedWord.status || "pending"}
-                  onChange={(e) => setSelectedWord({ ...selectedWord, status: e.target.value })}
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #CBD5E1", marginTop: "4px", boxSizing: "border-box" }}
-                >
-                  <option value="pending">Pending</option>
-                  <option value="approved">Approved</option>
-                  <option value="rejected">Rejected</option>
-                </select>
-              </div>
-
               <div style={{ display: "flex", gap: "10px", marginTop: "12px" }}>
                 <button
                   type="button"
                   onClick={() => setIsEditModalOpen(false)}
-                  style={{ flex: 1, padding: "10px", borderRadius: "8px", border: "1px solid #CBD5E1", backgroundColor: "#FFFFFF", cursor: "pointer" }}
+                  style={{
+                    flex: 1,
+                    padding: "10px",
+                    borderRadius: "8px",
+                    border: "1px solid #CBD5E1",
+                    backgroundColor: "#FFFFFF",
+                    color: "#475569",
+                    fontWeight: "600",
+                    cursor: "pointer"
+                  }}
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={actionLoading}
-                  style={{ flex: 1, padding: "10px", borderRadius: "8px", border: "none", backgroundColor: "#2563EB", color: "#FFFFFF", fontWeight: "600", cursor: "pointer" }}
+                  style={{
+                    flex: 1,
+                    padding: "10px",
+                    borderRadius: "8px",
+                    border: "none",
+                    backgroundColor: "#2563EB",
+                    color: "#FFFFFF",
+                    fontWeight: "600",
+                    cursor: "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "6px"
+                  }}
                 >
-                  {actionLoading ? "Saving..." : "Save Changes"}
+                  {actionLoading ? <Loader2 size={16} className="animate-spin" /> : "Save Changes"}
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
-
     </div>
   );
 }

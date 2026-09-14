@@ -32,25 +32,19 @@ export default function ModeratorPage() {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
-  // 1. Fetch Words Data from Backend API (Read Access)
+  // 1. Fetch Words Data from Backend API
   const fetchWords = async () => {
     setLoading(true);
     setError("");
     try {
-      const token = localStorage.getItem("authToken");
-      const headers = {
-        "Content-Type": "application/json",
-        ...(token && { Authorization: `Bearer ${token}` })
-      };
-
-      const response = await fetch("/api/moderator/pending", { headers });
+      const response = await fetch("/api/moderator/pending");
       const result = await response.json();
 
       if (response.ok && result.success) {
         setWordsList(result.data || []);
       } else {
         // Fallback for general words endpoint
-        const fallbackRes = await fetch("/api/words", { headers });
+        const fallbackRes = await fetch("/api/words");
         const fallbackResult = await fallbackRes.json();
         if (fallbackRes.ok && fallbackResult.success) {
           setWordsList(fallbackResult.data || []);
@@ -77,46 +71,29 @@ export default function ModeratorPage() {
     return clusterMatch && statusMatch;
   });
 
-  // 2. Moderator Save Edit Action (Write Access -> Updates PostgreSQL & sends to Admin Queue)
+  // 2. Moderator Save Edit Action (Only Edit & Save feature)
   const handleSaveEdit = async (e) => {
     e.preventDefault();
-    if (!selectedWord) return;
     setActionLoading(true);
 
     try {
-      const token = localStorage.getItem("authToken");
-      const wordId = selectedWord.id || selectedWord.sno;
-
-      // Sending updated word data so Admin can view the corrected version
-      const updatedPayload = {
-        ...selectedWord,
-        status: "pending" // Ensures Admin receives it in the approval queue
-      };
-
-      const response = await fetch(`/api/moderator/update/${wordId}`, {
+      const response = await fetch(`/api/moderator/update/${selectedWord.id}`, {
         method: "PATCH",
-        headers: { 
-          "Content-Type": "application/json",
-          ...(token && { Authorization: `Bearer ${token}` })
-        },
-        body: JSON.stringify(updatedPayload)
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(selectedWord)
       });
 
-      const result = await response.json();
-
-      if (response.ok && result.success) {
-        // Local State Update
+      if (response.ok) {
         setWordsList((prev) =>
-          prev.map((item) => ((item.id || item.sno) === wordId ? updatedPayload : item))
+          prev.map((item) => (item.id === selectedWord.id ? selectedWord : item))
         );
         setIsEditModalOpen(false);
-        alert("Word edited and sent to Admin for final review successfully!");
+        alert("Word edited and saved successfully!");
       } else {
-        alert(result.message || "Failed to update word.");
+        alert("Failed to update word.");
       }
     } catch (err) {
-      console.error("Update error:", err);
-      alert("Error updating word. Please check server status.");
+      alert("Error updating word.");
     } finally {
       setActionLoading(false);
     }
@@ -142,7 +119,7 @@ export default function ModeratorPage() {
         </div>
 
         <h1 style={{ fontSize: "20px", fontWeight: "700", color: "#0F172A", margin: 0, letterSpacing: "-0.3px" }}>
-          Moderator Dashboard (Read & Edit Access)
+          Moderator Dashboard
         </h1>
 
         <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
@@ -249,7 +226,7 @@ export default function ModeratorPage() {
             
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexWrap: "wrap", gap: "12px" }}>
               <h2 style={{ fontSize: "18px", fontWeight: "700", color: "#1E293B", margin: 0 }}>
-                Content Review & Editing (Edits route to Admin)
+                Content Review & Editing
               </h2>
 
               {/* Status Filter Dropdown */}
@@ -347,7 +324,7 @@ export default function ModeratorPage() {
                     {filteredWords.map((row, index) => {
                       const status = (row.status || "pending").toLowerCase();
                       return (
-                        <tr key={row.id || row.sno || index} style={{ borderBottom: "1px solid #F1F5F9" }}>
+                        <tr key={row.id || index} style={{ borderBottom: "1px solid #F1F5F9" }}>
                           <td style={{ padding: "14px 16px", fontSize: "14px", color: "#334155" }}>{index + 1}</td>
                           <td style={{ padding: "14px 16px", fontSize: "14px", fontWeight: "600", color: "#0F172A" }}>{row.kokborok_word}</td>
                           <td style={{ padding: "14px 16px", fontSize: "14px", color: "#334155" }}>{row.english_word}</td>
@@ -372,7 +349,7 @@ export default function ModeratorPage() {
                           <td style={{ padding: "14px 16px" }}>
                             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
                               
-                              {/* 1. View Details Button (READ ACCESS) */}
+                              {/* View Details Button */}
                               <button
                                 title="View Details"
                                 onClick={() => {
@@ -395,9 +372,9 @@ export default function ModeratorPage() {
                                 <Eye size={16} />
                               </button>
 
-                              {/* 2. Edit Button (WRITE ACCESS -> SENDS TO ADMIN) */}
+                              {/* Edit Button */}
                               <button
-                                title="Edit & Save Word (Sends to Admin)"
+                                title="Edit & Save Word"
                                 onClick={() => {
                                   setSelectedWord(row);
                                   setIsEditModalOpen(true);
@@ -432,7 +409,7 @@ export default function ModeratorPage() {
         </main>
       </div>
 
-      {/* VIEW DETAILS MODAL (READ-ONLY ACCESS) */}
+      {/* VIEW DETAILS MODAL */}
       {isViewModalOpen && selectedWord && (
         <div style={{
           position: "fixed",
@@ -454,7 +431,7 @@ export default function ModeratorPage() {
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
               <h3 style={{ margin: 0, fontSize: "18px", fontWeight: "700", color: "#0F172A" }}>
-                Word Details (Read-Only)
+                Word Details
               </h3>
               <button onClick={() => setIsViewModalOpen(false)} style={{ border: "none", background: "none", cursor: "pointer", color: "#64748B" }}>
                 <X size={20} />
@@ -481,7 +458,7 @@ export default function ModeratorPage() {
         </div>
       )}
 
-      {/* EDIT & SAVE MODAL (WRITE ACCESS -> SENDS TO ADMIN PAGE) */}
+      {/* EDIT & SAVE MODAL */}
       {isEditModalOpen && selectedWord && (
         <div style={{
           position: "fixed",
@@ -503,7 +480,7 @@ export default function ModeratorPage() {
           }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
               <h3 style={{ margin: 0, fontSize: "18px", fontWeight: "700", color: "#0F172A" }}>
-                Edit & Save Word (Pending Admin Review)
+                Edit & Save Word Details
               </h3>
               <button 
                 onClick={() => setIsEditModalOpen(false)}
@@ -606,7 +583,7 @@ export default function ModeratorPage() {
                     gap: "6px"
                   }}
                 >
-                  {actionLoading ? <Loader2 size={16} className="animate-spin" /> : "Save & Send to Admin"}
+                  {actionLoading ? <Loader2 size={16} className="animate-spin" /> : "Save Changes"}
                 </button>
               </div>
             </form>
