@@ -9,9 +9,9 @@ export default function App() {
   return (
     <Routes>
       <Route path="/" element={<AuthPage />} />
-      <Route path="/admin" element={<AdminDashboard />} />
+      <Route path="/admin-dashboard" element={<AdminDashboard />} />
       <Route path="/moderator" element={<ModeratorPage />} />
-      <Route path="/student" element={<ContributionPage />} />
+      <Route path="/contribution" element={<ContributionPage />} />
     </Routes>
   );
 }

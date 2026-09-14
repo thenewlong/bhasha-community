@@ -5,7 +5,7 @@ import { db } from "../../firebase/firebase.js";
 import { doc, getDoc } from "firebase/firestore";
 
 // 📷 File Explorer se logo import
-import logoImg from "../../assets/bhasha-logo.jpeg"; 
+import logoImg from "../../assets/bhasha-logos.jpeg"; 
 
 import { 
   Mail, 
@@ -143,8 +143,8 @@ export default function AuthPage() {
 
     try {
       if (isLogin) {
-        // --- 1. STUDENT LOGIN (Email + Password) ---
-        if (role === "student") {
+        // --- 1. STUDENT & FACULTY LOGIN (Email + Password) ---
+        if (role === "student" || role === "faculty") {
           if (!password) {
             setLoading(false);
             return setError("Please enter your password.");
@@ -184,13 +184,13 @@ export default function AuthPage() {
         }
 
       } else {
-        // --- 4. STUDENT SIGNUP ---
+        // --- 4. STUDENT / FACULTY SIGNUP ---
         if (captchaInput !== captchaCode) {
           setLoading(false);
           return setError("Captcha code does not match!");
         }
 
-        await signup(email, password, fullName);
+        await signup(email, password, fullName, role);
         animateAndNavigate("/contribution");
       }
     } catch (err) {
@@ -407,26 +407,36 @@ export default function AuthPage() {
                     }}
                   >
                     <option value="student">Students</option>
+                    <option value="faculty">Faculty</option>
                     <option value="moderator">Moderators</option>
                     <option value="admin">Admin</option>
                   </select>
                 ) : (
-                  <div style={{
-                    width: "100%",
-                    backgroundColor: "#F5F7F3",
-                    border: "1px solid #E1E7DC",
-                    color: "#2D3728",
-                    borderRadius: "16px",
-                    padding: "14px 14px 14px 44px",
-                    fontSize: "14px",
-                    fontWeight: "600",
-                    boxSizing: "border-box"
-                  }}>
-                    Students
-                  </div>
+                  <select
+                    value={role}
+                    onChange={(e) => { setRole(e.target.value); setError(""); }}
+                    className="custom-input"
+                    style={{
+                      width: "100%",
+                      backgroundColor: "#F9FAFAF8",
+                      border: "1px solid #E1E7DC",
+                      color: "#2D3728",
+                      borderRadius: "16px",
+                      padding: "14px 14px 14px 44px",
+                      fontSize: "14px",
+                      fontWeight: "500",
+                      outline: "none",
+                      appearance: "none",
+                      boxSizing: "border-box",
+                      cursor: "pointer"
+                    }}
+                  >
+                    <option value="student">Students</option>
+                    <option value="faculty">Faculty</option>
+                  </select>
                 )}
                 <User size={19} color="#788871" style={{ position: "absolute", left: "15px", top: "15px" }} />
-                {isLogin && <ChevronDown size={18} color="#94A3B8" style={{ position: "absolute", right: "15px", top: "16px", pointerEvents: "none" }} />}
+                <ChevronDown size={18} color="#94A3B8" style={{ position: "absolute", right: "15px", top: "16px", pointerEvents: "none" }} />
               </div>
             </div>
 
@@ -486,8 +496,8 @@ export default function AuthPage() {
               </div>
             </div>
 
-            {/* PASSWORD (Only for Signup OR Student Login) */}
-            {(!isLogin || (isLogin && role === "student")) && (
+            {/* PASSWORD (Only for Signup OR Student/Faculty Login) */}
+            {(!isLogin || (isLogin && (role === "student" || role === "faculty"))) && (
               <div className="form-stagger" style={{ animationDelay: isLogin ? "0.15s" : "0.2s" }}>
                 <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#2B3428", marginBottom: "6px" }}>Password</label>
                 <div style={{ position: "relative" }}>
@@ -608,7 +618,7 @@ export default function AuthPage() {
                 letterSpacing: "0.2px"
               }}
             >
-              {loading ? "Processing..." : isLogin ? (role === "student" ? "Log In →" : "Continue →") : "Sign Up →"}
+              {loading ? "Processing..." : isLogin ? ((role === "student" || role === "faculty") ? "Log In →" : "Continue →") : "Sign Up →"}
             </button>
           </form>
 
@@ -632,13 +642,7 @@ export default function AuthPage() {
               {isLogin ? "Create Account" : "Log In"}
             </button>
           </p>
-       
-
-        
-          
-          
         </div>
-
       </div>
     </div>
   );

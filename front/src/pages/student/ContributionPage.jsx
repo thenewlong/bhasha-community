@@ -3,7 +3,7 @@ import { useAuth } from "../../context/AuthContext";
 import StudentProfileModal from "../../components/StudentProfileModal";
 
 // 🖼️ Website Logo Asset Import (Apne folder structure ke hisab se path update karein)
-import logo from "../../assets/bhasha-logo.jpeg"; 
+import logo from "../../assets/bhasha-logos.jpeg"; 
 
 import { 
   ChevronDown, 
