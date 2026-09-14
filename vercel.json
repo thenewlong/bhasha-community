@@ -1,20 +1,20 @@
 {
-  "version": 2,
+  "sion": 2,
   "builds": [
     {
-      "src": "backend/src/server.js",
-      "use": "@vercel/node"
+      "src": "backend/src/ser.js",
+      "use": "@cel/node"
     },
     {
       "src": "front/package.json",
-      "use": "@vercel/static-build",
+      "use": "@cel/static-build",
       "config": { "distDir": "dist" }
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "backend/src/server.js"
+      "dest": "backend/src/ser.js"
     },
     {
       "src": "/(.*)",
