@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
-import StudentProfileModal from "../../components/StudentProfileModal";
+// 👤 Profile Modal Import Path Updated
+import StudentProfileModal from "../../components/studentProfileModal";
 
-// 🖼️ Website Logo Asset Import (Apne folder structure ke hisab se path update karein)
+// 🖼️ Website Logo Asset Import
 import logo from "../../assets/bhasha-logos.jpeg"; 
 
 import { 
@@ -27,9 +28,15 @@ export default function ContributionPage() {
   const [hindi, setHindi] = useState("");
   const [bangali, setBangali] = useState("");
   const [clustering, setClustering] = useState("Most used");
-  const [contributorName, setContributorName] = useState(
-    currentUser?.displayName || currentUser?.email?.split("@")[0] || ""
-  );
+  
+  // Contributor Name state (Auto-filled from User)
+  const [contributorName, setContributorName] = useState("");
+
+  // Sync Contributor Name whenever user loads
+  useEffect(() => {
+    const defaultName = currentUser?.displayName || currentUser?.email?.split("@")[0] || "Contributor";
+    setContributorName(defaultName);
+  }, [currentUser]);
 
   // UI State Controls
   const [loading, setLoading] = useState(false);
@@ -38,6 +45,21 @@ export default function ContributionPage() {
   const [hasUnread, setHasUnread] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+
+  // -------------------------------------------------------------
+  // 🔤 SCRIPT VALIDATION HANDLERS (No Roman Script for Hindi & Bengali)
+  // -------------------------------------------------------------
+  const handleHindiChange = (e) => {
+    // Restrict input to Devanagari script characters + spaces only (blocks Roman English letters)
+    const val = e.target.value.replace(/[^\u0900-\u097F\s]/g, "");
+    setHindi(val);
+  };
+
+  const handleBangaliChange = (e) => {
+    // Restrict input to Bengali script characters + spaces only (blocks Roman English letters)
+    const val = e.target.value.replace(/[^\u0980-\u09FF\s]/g, "");
+    setBangali(val);
+  };
 
   // -------------------------------------------------------------
   // 📱 MOBILE ANTI-ZOOM & GESTURE LOCK
@@ -69,7 +91,9 @@ export default function ContributionPage() {
     };
   }, []);
 
-  // Submit Handler
+  // -------------------------------------------------------------
+  // 🚀 SUBMIT HANDLER (API ROUTE DRIVEN LOGIC)
+  // -------------------------------------------------------------
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
@@ -77,6 +101,7 @@ export default function ContributionPage() {
 
     const currentContributor = contributorName.trim() || "Contributor";
 
+    // Payload sending to API backend (Includes userId for student tracking)
     const payload = {
       kokborok_word: kokborok,
       english_word: english,
@@ -84,11 +109,12 @@ export default function ContributionPage() {
       bangali_word: bangali,
       clustering: clustering,
       contributor_name: currentContributor,
-      submitted_by_email: currentUser?.email || "anonymous@bhasa.com"
+      submitted_by_email: currentUser?.email || "anonymous@bhasa.com",
+      userId: currentUser?.uid || "" // Unique ID sent to API backend
     };
 
     try {
-      const response = await fetch("api/contributions/submit", {
+      const response = await fetch("/api/contributions/submit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload)
@@ -403,11 +429,11 @@ export default function ContributionPage() {
             {/* Kokborok Label */}
             <div style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "8px" }}>
               <label style={{ fontSize: "12px", fontWeight: "800", color: "#182216", letterSpacing: "0.5px" }}>
-                KOKBOROK WORD
+                KOKBOROK WORD <span style={{ color: "#EF4444" }}>*</span>
               </label>
             </div>
 
-            {/* Input Kokborok */}
+            {/* Input Kokborok (COMPULSORY) */}
             <div style={{ position: "relative" }}>
               <Leaf size={16} color="#819A70" style={{ position: "absolute", left: "12px", top: "13px" }} />
               <input
@@ -439,10 +465,10 @@ export default function ContributionPage() {
               <div style={{ position: "absolute", right: "16.66%", top: "11px", bottom: 0, width: "2px", backgroundColor: "#B2C5A4" }}></div>
             </div>
 
-            {/* 3 TRANSLATION BOXES (FORCED 3-COLUMN MIND MAP GRID FOR MOBILE SCREEN) */}
+            {/* 3 TRANSLATION BOXES */}
             <div className="translation-tree-grid">
               
-              {/* English Box */}
+              {/* English Box (COMPULSORY) */}
               <div style={{
                 backgroundColor: "#FFFFFF",
                 border: "1px solid #E1E8DE",
@@ -451,7 +477,7 @@ export default function ContributionPage() {
                 minWidth: 0
               }}>
                 <label style={{ fontSize: "9.5px", fontWeight: "800", color: "#182216", display: "block", marginBottom: "4px", textAlign: "center", whiteSpace: "nowrap" }}>
-                  ENGLISH WORD
+                  ENGLISH WORD <span style={{ color: "#EF4444" }}>*</span>
                 </label>
                 <input
                   type="text"
@@ -474,7 +500,7 @@ export default function ContributionPage() {
                 />
               </div>
 
-              {/* Hindi Box */}
+              {/* Hindi Box (OPTIONAL + HINDI SCRIPT ONLY) */}
               <div style={{
                 backgroundColor: "#FFFFFF",
                 border: "1px solid #E1E8DE",
@@ -487,10 +513,9 @@ export default function ContributionPage() {
                 </label>
                 <input
                   type="text"
-                  required
-                  placeholder="Enter Hindi..."
+                  placeholder="हिंदी (Optional)..."
                   value={hindi}
-                  onChange={(e) => setHindi(e.target.value)}
+                  onChange={handleHindiChange}
                   className="bhasa-input-focus"
                   style={{
                     width: "100%",
@@ -506,7 +531,7 @@ export default function ContributionPage() {
                 />
               </div>
 
-              {/* Bangali Box */}
+              {/* Bangali Box (OPTIONAL + BENGALI SCRIPT ONLY) */}
               <div style={{
                 backgroundColor: "#FFFFFF",
                 border: "1px solid #E1E8DE",
@@ -519,10 +544,9 @@ export default function ContributionPage() {
                 </label>
                 <input
                   type="text"
-                  required
-                  placeholder="Enter Bangali..."
+                  placeholder="বাংলা (Optional)..."
                   value={bangali}
-                  onChange={(e) => setBangali(e.target.value)}
+                  onChange={handleBangaliChange}
                   className="bhasa-input-focus"
                   style={{
                     width: "100%",
@@ -652,7 +676,7 @@ export default function ContributionPage() {
             </div>
           </div>
 
-          {/* 3️⃣ CONTRIBUTOR NAME CARD */}
+          {/* 3️⃣ CONTRIBUTOR NAME CARD (READ-ONLY) */}
           <div style={{
             backgroundColor: "#F9FAF8",
             border: "1px solid #E3E9E1",
@@ -670,20 +694,20 @@ export default function ContributionPage() {
               <User size={16} color="#819A70" style={{ position: "absolute", left: "12px", top: "13px" }} />
               <input
                 type="text"
-                required
-                placeholder="Enter contribution name..."
+                readOnly
+                placeholder="Contributor name..."
                 value={contributorName}
-                onChange={(e) => setContributorName(e.target.value)}
-                className="bhasa-input-focus"
                 style={{
                   width: "100%",
                   padding: "10px 12px 10px 38px",
                   borderRadius: "14px",
                   border: "1px solid #D5DDD2",
-                  backgroundColor: "#FFFFFF",
-                  color: "#182216",
+                  backgroundColor: "#EEF3EC",
+                  color: "#4A5847",
                   fontSize: "13.5px",
-                  outline: "none"
+                  fontWeight: "600",
+                  outline: "none",
+                  cursor: "not-allowed"
                 }}
               />
             </div>
