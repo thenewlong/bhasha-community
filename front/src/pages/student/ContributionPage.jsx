@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
-// 👤 Profile Modal Import Path Updated
+// 👤 Profile Modal Import Path
 import StudentProfileModal from "../../components/studentProfileModal";
 
 // 🖼️ Website Logo Asset Import
@@ -45,6 +45,25 @@ export default function ContributionPage() {
   const [hasUnread, setHasUnread] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+
+  // -------------------------------------------------------------
+  // 🛑 PREVENT BACK NAVIGATION TO LOGIN/SIGNUP PAGE ON MOBILE
+  // -------------------------------------------------------------
+  useEffect(() => {
+    // Current history entry push karein
+    window.history.pushState(null, "", window.location.href);
+
+    const handlePopState = () => {
+      // User jab back press karega, dubara state push karke back action ko block kar dega
+      window.history.pushState(null, "", window.location.href);
+    };
+
+    window.addEventListener("popstate", handlePopState);
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, []);
 
   // -------------------------------------------------------------
   // 🔤 SCRIPT VALIDATION HANDLERS (No Roman Script for Hindi & Bengali)

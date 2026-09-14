@@ -1,827 +1,505 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../../context/AuthContext";
-import { db } from "../../firebase/firebase";
-import { doc, setDoc } from "firebase/firestore";
 import { 
-  Menu, 
-  Users, 
-  LayoutList, 
-  ChevronDown, 
-  Eye, 
-  Pencil, 
-  Trash2, 
+  ShieldCheck, 
+  Check, 
   X, 
-  Loader2,
-  ShieldCheck,
-  UserPlus,
-  LogOut,
-  CheckCircle2,
+  Trash2, 
+  Search, 
+  Filter, 
+  RefreshCw, 
+  Layers, 
+  Leaf, 
+  Clock, 
+  CheckCircle, 
   XCircle,
-  Filter
+  User,
+  AlertCircle
 } from "lucide-react";
 
 export default function AdminDashboard() {
-  const { currentUser, logout } = useAuth();
+  const { currentUser } = useAuth();
 
-  // Firebase Pre-Approve State
-  const [newEmail, setNewEmail] = useState("");
-  const [roleType, setRoleType] = useState("allowed_moderator");
-  const [msg, setMsg] = useState("");
-  const [emailLoading, setEmailLoading] = useState(false);
-
-  // Clustering & Status Filter States
-  const [activeTab, setActiveTab] = useState("Most used");
-  const [statusFilter, setStatusFilter] = useState("all"); // 'all', 'pending', 'approved', 'rejected'
-
-  // Backend Data States (PostgreSQL)
-  const [wordsList, setWordsList] = useState([]);
+  // State Management
+  const [contributions, setContributions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [actionLoading, setActionLoading] = useState(null);
+  const [errorMsg, setErrorMsg] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
 
-  // Modal States
-  const [selectedWord, setSelectedWord] = useState(null);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const [actionLoading, setActionLoading] = useState(false);
+  // Filters & Search State
+  const [statusFilter, setStatusFilter] = useState("all"); // 'all', 'pending', 'approved', 'rejected'
+  const [searchTerm, setSearchTerm] = useState("");
 
-  // 1. Firebase Function: Handle Allow Email
-  const handleAllowEmail = async (e) => {
-    e.preventDefault();
-    setMsg("");
-    setEmailLoading(true);
-    try {
-      await setDoc(doc(db, roleType, newEmail.toLowerCase().trim()), {
-        allowedAt: new Date().toISOString()
-      });
-      setMsg(`✅ Success: ${newEmail} added to ${roleType === "allowed_moderator" ? "Moderators" : "Admins"}`);
-      setNewEmail("");
-    } catch (err) {
-      setMsg("❌ Error: " + err.message);
-    } finally {
-      setEmailLoading(false);
-    }
-  };
-
-  // 2. Fetch Words Data from Backend API
-  const fetchWords = async () => {
+  // -------------------------------------------------------------
+  // 📥 FETCH ALL CONTRIBUTIONS FROM BACKEND API
+  // -------------------------------------------------------------
+  const fetchContributions = async () => {
     setLoading(true);
-    setError("");
+    setErrorMsg("");
     try {
-      const response = await fetch("/api/admin/words");
-      const result = await response.json();
-
-      if (response.ok && result.success) {
-        setWordsList(result.data || []);
-      } else {
-        // Fallback for Moderator pending/all endpoints
-        const modRes = await fetch("/api/moderator/pending");
-        const modResult = await modRes.json();
-        if (modRes.ok && modResult.success) {
-          setWordsList(modResult.data || []);
-        } else {
-          setWordsList([]);
+      // API call to fetch all submitted words (Pending, Approved, Rejected)
+      const response = await fetch("/api/admin/contributions", {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${currentUser?.accessToken || ""}`
         }
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch contribution data.");
       }
+
+      const data = await response.json();
+      setContributions(data.contributions || []);
     } catch (err) {
-      console.error("Fetch error:", err);
-      setError("Failed to load records. Please check backend connectivity.");
+      console.error("Error fetching admin data:", err);
+      setErrorMsg(err.message || "Failed to load submitted words.");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchWords();
+    fetchContributions();
   }, []);
 
-  // Filter List according to Active Tab (Clustering) & Status Filter
-  const filteredWords = wordsList.filter((item) => {
-    const clusterMatch = (item.clustering || "").trim().toLowerCase() === activeTab.trim().toLowerCase();
-    const statusMatch = statusFilter === "all" || (item.status || "").toLowerCase() === statusFilter.toLowerCase();
-    return clusterMatch && statusMatch;
-  });
+  // -------------------------------------------------------------
+  // ✅ APPROVE / ❌ REJECT / 🗑️ DELETE ACTIONS
+  // -------------------------------------------------------------
+  const handleUpdateStatus = async (id, newStatus) => {
+    setActionLoading(id);
+    setErrorMsg("");
+    setSuccessMsg("");
 
-  // 3. Admin Change Status (Approve / Reject) Action
-  const handleStatusChange = async (id, newStatus) => {
     try {
-      const response = await fetch(`/api/admin/status/${id}`, {
+      const response = await fetch(`/api/admin/contributions/${id}/status`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${currentUser?.accessToken || ""}`
+        },
         body: JSON.stringify({ status: newStatus })
       });
 
-      if (response.ok) {
-        setWordsList((prev) =>
-          prev.map((item) => (item.id === id ? { ...item, status: newStatus } : item))
-        );
-      } else {
-        // Fallback to moderator review endpoint if admin status endpoint is not yet configured
-        const fallbackRes = await fetch(`/api/moderator/review/${id}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ status: newStatus })
-        });
-        if (fallbackRes.ok) {
-          setWordsList((prev) =>
-            prev.map((item) => (item.id === id ? { ...item, status: newStatus } : item))
-          );
-        } else {
-          alert("Failed to update status.");
-        }
+      if (!response.ok) {
+        throw new Error(`Failed to update status to ${newStatus}`);
       }
+
+      // Local State Update
+      setContributions((prev) =>
+        prev.map((item) =>
+          item.id === id ? { ...item, status: newStatus } : item
+        )
+      );
+
+      setSuccessMsg(`Word successfully marked as ${newStatus}!`);
+      setTimeout(() => setSuccessMsg(""), 3000);
     } catch (err) {
-      alert("Error connecting to server.");
-    }
-  };
-
-  // 4. Admin Delete Word Action
-  const handleDelete = async (id, wordName) => {
-    if (!window.confirm(`Admin Permission: Permanently delete "${wordName}"?`)) return;
-
-    try {
-      const response = await fetch(`/api/admin/delete/${id}`, {
-        method: "DELETE"
-      });
-
-      if (response.ok) {
-        setWordsList((prev) => prev.filter((item) => item.id !== id));
-        alert("Word deleted permanently!");
-      } else {
-        alert("Failed to delete record.");
-      }
-    } catch (err) {
-      alert("Error connecting to server.");
-    }
-  };
-
-  // 5. Admin Save Edit Action
-  const handleSaveEdit = async (e) => {
-    e.preventDefault();
-    setActionLoading(true);
-
-    try {
-      const response = await fetch(`/api/admin/update/${selectedWord.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(selectedWord)
-      });
-
-      if (response.ok) {
-        setWordsList((prev) =>
-          prev.map((item) => (item.id === selectedWord.id ? selectedWord : item))
-        );
-        setIsEditModalOpen(false);
-        alert("Word updated successfully!");
-      } else {
-        alert("Failed to update word.");
-      }
-    } catch (err) {
-      alert("Error updating word.");
+      setErrorMsg(err.message || "Action failed. Please try again.");
     } finally {
-      setActionLoading(false);
+      setActionLoading(null);
     }
   };
+
+  const handleDeleteWord = async (id) => {
+    if (!window.confirm("Are you sure you want to permanently delete this word entry?")) return;
+
+    setActionLoading(id);
+    setErrorMsg("");
+    setSuccessMsg("");
+
+    try {
+      const response = await fetch(`/api/admin/contributions/${id}`, {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${currentUser?.accessToken || ""}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete word from database.");
+      }
+
+      // Remove from Local State
+      setContributions((prev) => prev.filter((item) => item.id !== id));
+      setSuccessMsg("Word entry permanently deleted.");
+      setTimeout(() => setSuccessMsg(""), 3000);
+    } catch (err) {
+      setErrorMsg(err.message || "Delete operation failed.");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // -------------------------------------------------------------
+  // 🔍 FILTER & SEARCH LOGIC
+  // -------------------------------------------------------------
+  const filteredContributions = contributions.filter((item) => {
+    const matchesStatus = statusFilter === "all" || item.status?.toLowerCase() === statusFilter.toLowerCase();
+    
+    const search = searchTerm.toLowerCase().trim();
+    const matchesSearch = 
+      !search ||
+      item.kokborok_word?.toLowerCase().includes(search) ||
+      item.english_word?.toLowerCase().includes(search) ||
+      item.hindi_word?.toLowerCase().includes(search) ||
+      item.bangali_word?.toLowerCase().includes(search) ||
+      item.contributor_name?.toLowerCase().includes(search);
+
+    return matchesStatus && matchesSearch;
+  });
+
+  // Analytics Stats Calculation
+  const totalCount = contributions.length;
+  const pendingCount = contributions.filter((c) => (c.status || "pending").toLowerCase() === "pending").length;
+  const approvedCount = contributions.filter((c) => c.status?.toLowerCase() === "approved").length;
+  const rejectedCount = contributions.filter((c) => c.status?.toLowerCase() === "rejected").length;
 
   return (
-    <div style={{ minHeight: "100vh", backgroundColor: "#F8FAFC", fontFamily: "system-ui, -apple-system, sans-serif" }}>
-      
-      {/* TOP NAVBAR */}
-      <header style={{
-        height: "64px",
-        backgroundColor: "#FFFFFF",
-        borderBottom: "1px solid #E2E8F0",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        padding: "0 24px"
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-          <button style={{ border: "none", background: "none", cursor: "pointer", color: "#64748B" }}>
-            <Menu size={22} />
-          </button>
-        </div>
+    <div style={{
+      minHeight: "100vh",
+      backgroundColor: "#F8FAF7",
+      color: "#182216",
+      padding: "24px 16px 60px 16px",
+      fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif"
+    }}>
+      <div style={{ maxWidth: "1100px", margin: "0 auto" }}>
 
-        <h1 style={{ fontSize: "22px", fontWeight: "700", color: "#0F172A", margin: 0, letterSpacing: "-0.3px" }}>
-          Admin Control Center
-        </h1>
-
-        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-            <div style={{
-              width: "36px",
-              height: "36px",
-              borderRadius: "50%",
-              backgroundColor: "#2563EB",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center"
-            }}>
-              <ShieldCheck size={20} color="#FFFFFF" />
+        {/* 🔝 ADMIN HEADER BAR */}
+        <div style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "12px",
+          marginBottom: "24px",
+          backgroundColor: "#FFFFFF",
+          padding: "18px 24px",
+          borderRadius: "20px",
+          border: "1px solid #E3E9E1",
+          boxShadow: "0 2px 10px rgba(0,0,0,0.02)"
+        }}>
+          <div>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <ShieldCheck size={26} color="#819A70" />
+              <h1 style={{ fontSize: "22px", fontWeight: "800", color: "#182216", margin: 0 }}>
+                Admin & Moderator Portal
+              </h1>
             </div>
-            <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: "13px", fontWeight: "600", color: "#1E293B" }}>
-                {currentUser?.email || "admin@gmail.com"}
-              </div>
-              <div style={{ fontSize: "11px", color: "#2563EB", fontWeight: "600" }}>Super Admin</div>
-            </div>
-            <ChevronDown size={16} color="#64748B" />
+            <p style={{ fontSize: "13px", color: "#657563", margin: "4px 0 0 0" }}>
+              Review, approve, and manage all user-submitted Kokborok translations.
+            </p>
           </div>
 
           <button
-            onClick={logout}
-            title="Logout"
+            onClick={fetchContributions}
+            disabled={loading}
             style={{
               display: "flex",
               alignItems: "center",
               gap: "6px",
-              backgroundColor: "#FEF2F2",
-              color: "#DC2626",
-              border: "1px solid #FCA5A5",
-              padding: "6px 12px",
-              borderRadius: "8px",
+              backgroundColor: "#819A70",
+              color: "#FFFFFF",
+              border: "none",
+              padding: "10px 18px",
+              borderRadius: "14px",
               fontSize: "13px",
-              fontWeight: "600",
+              fontWeight: "700",
               cursor: "pointer"
             }}
           >
-            <LogOut size={15} />
-            Logout
+            <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+            Refresh Queue
           </button>
         </div>
-      </header>
 
-      {/* BODY LAYOUT */}
-      <div style={{ display: "flex", minHeight: "calc(100vh - 64px)" }}>
-        
-        {/* LEFT SIDEBAR */}
-        <aside style={{
-          width: "64px",
+        {/* 📊 ANALYTICS STATS CARDS */}
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+          gap: "12px",
+          marginBottom: "24px"
+        }}>
+          {/* Total Submissions */}
+          <div style={{ backgroundColor: "#FFFFFF", padding: "16px", borderRadius: "16px", border: "1px solid #E3E9E1" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: "12px", fontWeight: "700", color: "#657563" }}>TOTAL SUBMISSIONS</span>
+              <Layers size={18} color="#819A70" />
+            </div>
+            <div style={{ fontSize: "24px", fontWeight: "800", color: "#182216", marginTop: "8px" }}>
+              {totalCount}
+            </div>
+          </div>
+
+          {/* Pending Review */}
+          <div style={{ backgroundColor: "#FFFBEB", padding: "16px", borderRadius: "16px", border: "1px solid #FCD34D" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: "12px", fontWeight: "700", color: "#B45309" }}>PENDING QUEUE</span>
+              <Clock size={18} color="#D97706" />
+            </div>
+            <div style={{ fontSize: "24px", fontWeight: "800", color: "#92400E", marginTop: "8px" }}>
+              {pendingCount}
+            </div>
+          </div>
+
+          {/* Approved Words */}
+          <div style={{ backgroundColor: "#F0FDF4", padding: "16px", borderRadius: "16px", border: "1px solid #86EFAC" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: "12px", fontWeight: "700", color: "#15803D" }}>APPROVED WORDS</span>
+              <CheckCircle size={18} color="#16A34A" />
+            </div>
+            <div style={{ fontSize: "24px", fontWeight: "800", color: "#166534", marginTop: "8px" }}>
+              {approvedCount}
+            </div>
+          </div>
+
+          {/* Rejected Words */}
+          <div style={{ backgroundColor: "#FEF2F2", padding: "16px", borderRadius: "16px", border: "1px solid #FCA5A5" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <span style={{ fontSize: "12px", fontWeight: "700", color: "#B91C1C" }}>REJECTED WORDS</span>
+              <XCircle size={18} color="#DC2626" />
+            </div>
+            <div style={{ fontSize: "24px", fontWeight: "800", color: "#991B1B", marginTop: "8px" }}>
+              {rejectedCount}
+            </div>
+          </div>
+        </div>
+
+        {/* 🔔 ALERT MESSAGES */}
+        {errorMsg && (
+          <div style={{ backgroundColor: "#FEF2F2", color: "#991B1B", padding: "12px 16px", borderRadius: "14px", marginBottom: "16px", border: "1px solid #FECACA", display: "flex", alignItems: "center", gap: "8px" }}>
+            <AlertCircle size={18} />
+            <span>{errorMsg}</span>
+          </div>
+        )}
+
+        {successMsg && (
+          <div style={{ backgroundColor: "#F0FDF4", color: "#166534", padding: "12px 16px", borderRadius: "14px", marginBottom: "16px", border: "1px solid #BBF7D0", display: "flex", alignItems: "center", gap: "8px" }}>
+            <CheckCircle size={18} />
+            <span>{successMsg}</span>
+          </div>
+        )}
+
+        {/* 🔍 SEARCH AND STATUS FILTER CONTROLS */}
+        <div style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: "12px",
+          marginBottom: "16px",
           backgroundColor: "#FFFFFF",
-          borderRight: "1px solid #E2E8F0",
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          paddingTop: "20px",
-          gap: "16px"
+          padding: "14px 18px",
+          borderRadius: "16px",
+          border: "1px solid #E3E9E1"
         }}>
-          <button style={{
-            width: "42px",
-            height: "42px",
-            borderRadius: "10px",
-            backgroundColor: "#EFF6FF",
-            border: "none",
-            color: "#2563EB",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer"
-          }}>
-            <Users size={20} />
-          </button>
+          {/* Search Box */}
+          <div style={{ position: "relative", flex: "1", minWidth: "220px" }}>
+            <Search size={16} color="#819A70" style={{ position: "absolute", left: "12px", top: "12px" }} />
+            <input
+              type="text"
+              placeholder="Search by word or contributor..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{
+                width: "100%",
+                padding: "8px 12px 8px 36px",
+                borderRadius: "10px",
+                border: "1px solid #D5DDD2",
+                outline: "none",
+                fontSize: "13px"
+              }}
+            />
+          </div>
 
-          <button style={{
-            width: "42px",
-            height: "42px",
-            borderRadius: "10px",
-            backgroundColor: "transparent",
-            border: "none",
-            color: "#94A3B8",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            cursor: "pointer"
-          }}>
-            <LayoutList size={20} />
-          </button>
-        </aside>
-
-        {/* MAIN CONTENT AREA */}
-        <main style={{ flex: 1, padding: "28px", maxWidth: "1280px", margin: "0 auto", width: "100%" }}>
-          
-          {/* SECTION 1: PRE-APPROVE EMAIL BOX (FIREBASE ACCESS CONTROL) */}
-          <div style={{
-            backgroundColor: "#FFFFFF",
-            borderRadius: "16px",
-            border: "1px solid #E2E8F0",
-            padding: "20px 24px",
-            marginBottom: "24px",
-            boxShadow: "0 1px 3px rgba(0,0,0,0.02)"
-          }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "8px" }}>
-              <UserPlus size={18} color="#2563EB" />
-              <h2 style={{ fontSize: "16px", fontWeight: "700", color: "#0F172A", margin: 0 }}>
-                Pre-Approve Moderator or Admin Email
-              </h2>
-            </div>
-            <p style={{ fontSize: "13px", color: "#64748B", margin: "0 0 12px 0" }}>
-              Add user email to Firebase access control so they can log in as Moderator or Admin.
-            </p>
-
-            {msg && (
-              <p style={{
-                fontSize: "13px",
-                fontWeight: "600",
-                color: msg.startsWith("❌") ? "#DC2626" : "#16A34A",
-                marginBottom: "12px",
-                margin: 0
-              }}>
-                {msg}
-              </p>
-            )}
-
-            <form onSubmit={handleAllowEmail} style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-              <input
-                type="email"
-                required
-                placeholder="Enter Email to Allow (e.g., mod@gmail.com)"
-                value={newEmail}
-                onChange={(e) => setNewEmail(e.target.value)}
-                style={{
-                  flex: "1 1 300px",
-                  padding: "10px 14px",
-                  borderRadius: "10px",
-                  border: "1px solid #CBD5E1",
-                  fontSize: "14px",
-                  outline: "none"
-                }}
-              />
-              <select
-                value={roleType}
-                onChange={(e) => setRoleType(e.target.value)}
-                style={{
-                  padding: "10px 14px",
-                  borderRadius: "10px",
-                  border: "1px solid #CBD5E1",
-                  fontSize: "14px",
-                  fontWeight: "500",
-                  backgroundColor: "#FFFFFF",
-                  outline: "none"
-                }}
-              >
-                <option value="allowed_moderator">Allowed Moderator</option>
-                <option value="allowed_admin">Allowed Admin</option>
-              </select>
+          {/* Status Filter Tabs */}
+          <div style={{ display: "flex", gap: "6px" }}>
+            {["all", "pending", "approved", "rejected"].map((st) => (
               <button
-                type="submit"
-                disabled={emailLoading}
+                key={st}
+                onClick={() => setStatusFilter(st)}
                 style={{
-                  backgroundColor: "#2563EB",
-                  color: "#FFFFFF",
-                  padding: "10px 20px",
+                  padding: "8px 14px",
                   borderRadius: "10px",
-                  fontSize: "14px",
+                  fontSize: "12px",
                   fontWeight: "700",
-                  border: "none",
+                  border: statusFilter === st ? "1.5px solid #819A70" : "1px solid #D5DDD2",
+                  backgroundColor: statusFilter === st ? "#819A70" : "#FFFFFF",
+                  color: statusFilter === st ? "#FFFFFF" : "#556453",
                   cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "6px"
+                  textTransform: "capitalize"
                 }}
               >
-                {emailLoading ? <Loader2 size={16} className="animate-spin" /> : "Add Permission"}
+                {st}
               </button>
-            </form>
+            ))}
           </div>
+        </div>
 
-          {/* SECTION 2: CLUSTERING & WORDS MANAGEMENT TABLE */}
-          <div style={{
-            backgroundColor: "#FFFFFF",
-            borderRadius: "16px",
-            border: "1px solid #E2E8F0",
-            padding: "24px",
-            boxShadow: "0 1px 3px rgba(0,0,0,0.02)"
-          }}>
-            
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexWrap: "wrap", gap: "12px" }}>
-              <h2 style={{ fontSize: "18px", fontWeight: "700", color: "#1E293B", margin: 0 }}>
-                Clustering & Words Management
-              </h2>
-
-              {/* Status Filter Dropdown */}
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <Filter size={16} color="#64748B" />
-                <span style={{ fontSize: "13px", fontWeight: "600", color: "#475569" }}>Status:</span>
-                <select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  style={{
-                    padding: "6px 12px",
-                    borderRadius: "8px",
-                    border: "1px solid #CBD5E1",
-                    fontSize: "13px",
-                    fontWeight: "500",
-                    outline: "none"
-                  }}
-                >
-                  <option value="all">All Status</option>
-                  <option value="pending">Pending</option>
-                  <option value="approved">Approved</option>
-                  <option value="rejected">Rejected</option>
-                </select>
-              </div>
+        {/* 📋 CONTRIBUTIONS DATA TABLE / LIST */}
+        <div style={{
+          backgroundColor: "#FFFFFF",
+          borderRadius: "20px",
+          border: "1px solid #E3E9E1",
+          overflow: "hidden",
+          boxShadow: "0 4px 14px rgba(0,0,0,0.02)"
+        }}>
+          {loading ? (
+            <div style={{ textAlign: "center", padding: "40px", color: "#657563" }}>
+              Loading contributions data...
             </div>
-
-            {/* CATEGORY TABS (3 CLUSTERING CATEGORIES) */}
-            <div style={{
-              display: "inline-flex",
-              backgroundColor: "#F1F5F9",
-              borderRadius: "12px",
-              padding: "4px",
-              marginBottom: "24px",
-              gap: "4px",
-              width: "100%",
-              maxWidth: "600px"
-            }}>
-              {["Most used", "Average used", "Rare used"].map((tab) => {
-                const isActive = activeTab.toLowerCase() === tab.toLowerCase();
-                return (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveTab(tab)}
-                    style={{
-                      flex: 1,
-                      padding: "10px 16px",
-                      borderRadius: "8px",
-                      border: "none",
-                      fontSize: "14px",
-                      fontWeight: isActive ? "600" : "500",
-                      backgroundColor: isActive ? "#FFFFFF" : "transparent",
-                      color: isActive ? "#2563EB" : "#64748B",
-                      cursor: "pointer",
-                      boxShadow: isActive ? "0 2px 4px rgba(0,0,0,0.04)" : "none",
-                      transition: "all 0.2s ease"
-                    }}
-                  >
-                    {tab}
-                  </button>
-                );
-              })}
+          ) : filteredContributions.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "40px", color: "#657563" }}>
+              No submitted words found in this section.
             </div>
+          ) : (
+            <div style={{ overflowX: "auto" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", fontSize: "13px" }}>
+                <thead>
+                  <tr style={{ backgroundColor: "#F4F7F2", borderBottom: "1px solid #E3E9E1", color: "#4A5847", fontSize: "11px", fontWeight: "800", textTransform: "uppercase" }}>
+                    <th style={{ padding: "14px 16px" }}>Kokborok Word</th>
+                    <th style={{ padding: "14px 16px" }}>Translations (EN / HI / BN)</th>
+                    <th style={{ padding: "14px 16px" }}>Clustering</th>
+                    <th style={{ padding: "14px 16px" }}>Contributor</th>
+                    <th style={{ padding: "14px 16px" }}>Status</th>
+                    <th style={{ padding: "14px 16px", textAlign: "right" }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredContributions.map((item) => {
+                    const status = (item.status || "pending").toLowerCase();
+                    const isPending = status === "pending";
+                    const isApproved = status === "approved";
+                    const isRejected = status === "rejected";
 
-            {/* TABLE AND LOADING STATES */}
-            {loading ? (
-              <div style={{ textAlign: "center", padding: "40px", color: "#64748B" }}>
-                <Loader2 size={28} className="animate-spin" style={{ margin: "0 auto 8px" }} />
-                <p>Loading database records...</p>
-              </div>
-            ) : error ? (
-              <div style={{ textAlign: "center", padding: "24px", color: "#DC2626", backgroundColor: "#FEF2F2", borderRadius: "8px" }}>
-                {error}
-              </div>
-            ) : filteredWords.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "40px 0", color: "#94A3B8" }}>
-                No words available in <b>"{activeTab}"</b> category with <b>"{statusFilter}"</b> status.
-              </div>
-            ) : (
-              /* DATA TABLE */
-              <div style={{ overflowX: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
-                  <thead>
-                    <tr style={{ backgroundColor: "#F8FAFC", borderBottom: "1px solid #E2E8F0" }}>
-                      <th style={{ padding: "12px 16px", fontSize: "13px", fontWeight: "600", color: "#475569", width: "50px" }}>S.No.</th>
-                      <th style={{ padding: "12px 16px", fontSize: "13px", fontWeight: "600", color: "#475569" }}>Kokborok</th>
-                      <th style={{ padding: "12px 16px", fontSize: "13px", fontWeight: "600", color: "#475569" }}>English</th>
-                      <th style={{ padding: "12px 16px", fontSize: "13px", fontWeight: "600", color: "#475569" }}>Hindi</th>
-                      <th style={{ padding: "12px 16px", fontSize: "13px", fontWeight: "600", color: "#475569" }}>Bangali</th>
-                      <th style={{ padding: "12px 16px", fontSize: "13px", fontWeight: "600", color: "#475569" }}>Submitted By</th>
-                      <th style={{ padding: "12px 16px", fontSize: "13px", fontWeight: "600", color: "#475569", textAlign: "center" }}>Status</th>
-                      <th style={{ padding: "12px 16px", fontSize: "13px", fontWeight: "600", color: "#475569", textAlign: "center", width: "180px" }}>Admin Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filteredWords.map((row, index) => {
-                      const status = (row.status || "pending").toLowerCase();
-                      return (
-                        <tr key={row.id || index} style={{ borderBottom: "1px solid #F1F5F9" }}>
-                          <td style={{ padding: "14px 16px", fontSize: "14px", color: "#334155" }}>{index + 1}</td>
-                          <td style={{ padding: "14px 16px", fontSize: "14px", fontWeight: "600", color: "#0F172A" }}>{row.kokborok_word}</td>
-                          <td style={{ padding: "14px 16px", fontSize: "14px", color: "#334155" }}>{row.english_word}</td>
-                          <td style={{ padding: "14px 16px", fontSize: "14px", color: "#334155" }}>{row.hindi_word}</td>
-                          <td style={{ padding: "14px 16px", fontSize: "14px", color: "#334155" }}>{row.bangali_word}</td>
-                          <td style={{ padding: "14px 16px", fontSize: "13px", color: "#64748B" }}>
-                            {row.contributor_name || "Anonymous"}
-                          </td>
-                          <td style={{ padding: "14px 16px", textAlign: "center" }}>
-                            <span style={{
-                              padding: "4px 10px",
-                              borderRadius: "12px",
-                              fontSize: "12px",
-                              fontWeight: "700",
-                              textTransform: "capitalize",
-                              backgroundColor: status === "approved" ? "#DCFCE7" : status === "rejected" ? "#FEE2E2" : "#FEF3C7",
-                              color: status === "approved" ? "#166534" : status === "rejected" ? "#991B1B" : "#92400E"
-                            }}>
-                              {status}
-                            </span>
-                          </td>
-                          <td style={{ padding: "14px 16px" }}>
-                            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
-                              
-                              {/* Quick Approve Button */}
-                              {status !== "approved" && (
-                                <button
-                                  title="Approve Word"
-                                  onClick={() => handleStatusChange(row.id, "approved")}
-                                  style={{
-                                    width: "30px",
-                                    height: "30px",
-                                    borderRadius: "50%",
-                                    backgroundColor: "#DCFCE7",
-                                    border: "none",
-                                    color: "#166534",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    cursor: "pointer"
-                                  }}
-                                >
-                                  <CheckCircle2 size={16} />
-                                </button>
-                              )}
+                    return (
+                      <tr key={item.id} style={{ borderBottom: "1px solid #E3E9E1" }}>
+                        
+                        {/* Kokborok Word */}
+                        <td style={{ padding: "14px 16px", fontWeight: "800", color: "#182216" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                            <Leaf size={14} color="#819A70" />
+                            <span>{item.kokborok_word}</span>
+                          </div>
+                        </td>
 
-                              {/* Quick Reject Button */}
-                              {status !== "rejected" && (
-                                <button
-                                  title="Reject Word"
-                                  onClick={() => handleStatusChange(row.id, "rejected")}
-                                  style={{
-                                    width: "30px",
-                                    height: "30px",
-                                    borderRadius: "50%",
-                                    backgroundColor: "#FEE2E2",
-                                    border: "none",
-                                    color: "#991B1B",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    cursor: "pointer"
-                                  }}
-                                >
-                                  <XCircle size={16} />
-                                </button>
-                              )}
+                        {/* Translations */}
+                        <td style={{ padding: "14px 16px", color: "#4A5847" }}>
+                          <div><strong>EN:</strong> {item.english_word || "—"}</div>
+                          {item.hindi_word && <div style={{ fontSize: "12px", color: "#657563" }}><strong>HI:</strong> {item.hindi_word}</div>}
+                          {item.bangali_word && <div style={{ fontSize: "12px", color: "#657563" }}><strong>BN:</strong> {item.bangali_word}</div>}
+                        </td>
 
-                              {/* View Details Button */}
-                              <button
-                                title="View Details"
-                                onClick={() => {
-                                  setSelectedWord(row);
-                                  setIsViewModalOpen(true);
-                                }}
-                                style={{
-                                  width: "30px",
-                                  height: "30px",
-                                  borderRadius: "50%",
-                                  backgroundColor: "#EFF6FF",
-                                  border: "none",
-                                  color: "#2563EB",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  cursor: "pointer"
-                                }}
-                              >
-                                <Eye size={15} />
-                              </button>
+                        {/* Clustering Tag */}
+                        <td style={{ padding: "14px 16px" }}>
+                          <span style={{
+                            padding: "4px 10px",
+                            borderRadius: "8px",
+                            fontSize: "11px",
+                            fontWeight: "700",
+                            backgroundColor: "#EEF3EC",
+                            color: "#4A5847"
+                          }}>
+                            {item.clustering || "Most used"}
+                          </span>
+                        </td>
 
-                              {/* Edit Button */}
-                              <button
-                                title="Edit Word"
-                                onClick={() => {
-                                  setSelectedWord(row);
-                                  setIsEditModalOpen(true);
-                                }}
-                                style={{
-                                  width: "30px",
-                                  height: "30px",
-                                  borderRadius: "50%",
-                                  backgroundColor: "#FFFBEB",
-                                  border: "none",
-                                  color: "#D97706",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  cursor: "pointer"
-                                }}
-                              >
-                                <Pencil size={15} />
-                              </button>
+                        {/* Contributor */}
+                        <td style={{ padding: "14px 16px", color: "#4A5847" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                            <User size={13} color="#819A70" />
+                            <span style={{ fontWeight: "600" }}>{item.contributor_name || "Contributor"}</span>
+                          </div>
+                          <div style={{ fontSize: "11px", color: "#888888" }}>{item.submitted_by_email || ""}</div>
+                        </td>
 
-                              {/* Delete Button */}
-                              <button
-                                title="Delete Word"
-                                onClick={() => handleDelete(row.id, row.kokborok_word)}
-                                style={{
-                                  width: "30px",
-                                  height: "30px",
-                                  borderRadius: "50%",
-                                  backgroundColor: "#FEF2F2",
-                                  border: "none",
-                                  color: "#EF4444",
-                                  display: "flex",
-                                  alignItems: "center",
-                                  justifyContent: "center",
-                                  cursor: "pointer"
-                                }}
-                              >
-                                <Trash2 size={15} />
-                              </button>
+                        {/* Status Badge */}
+                        <td style={{ padding: "14px 16px" }}>
+                          <span style={{
+                            padding: "4px 10px",
+                            borderRadius: "20px",
+                            fontSize: "11px",
+                            fontWeight: "800",
+                            textTransform: "uppercase",
+                            backgroundColor: isApproved ? "#DCFCE7" : isRejected ? "#FEE2E2" : "#FEF3C7",
+                            color: isApproved ? "#15803D" : isRejected ? "#B91C1C" : "#B45309"
+                          }}>
+                            {status}
+                          </span>
+                        </td>
 
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            )}
+                        {/* Action Buttons (Full Control for Admin) */}
+                        <td style={{ padding: "14px 16px", textAlign: "right" }}>
+                          <div style={{ display: "flex", justifyContent: "flex-end", gap: "6px" }}>
+                            
+                            {/* Approve Button */}
+                            <button
+                              onClick={() => handleUpdateStatus(item.id, "approved")}
+                              disabled={actionLoading === item.id || isApproved}
+                              title="Approve Word"
+                              style={{
+                                padding: "6px 10px",
+                                borderRadius: "8px",
+                                border: "none",
+                                backgroundColor: isApproved ? "#E2E8F0" : "#22C55E",
+                                color: "#FFFFFF",
+                                cursor: isApproved ? "not-allowed" : "pointer",
+                                opacity: isApproved ? 0.6 : 1
+                              }}
+                            >
+                              <Check size={15} />
+                            </button>
 
-          </div>
-        </main>
+                            {/* Reject Button */}
+                            <button
+                              onClick={() => handleUpdateStatus(item.id, "rejected")}
+                              disabled={actionLoading === item.id || isRejected}
+                              title="Reject Word"
+                              style={{
+                                padding: "6px 10px",
+                                borderRadius: "8px",
+                                border: "none",
+                                backgroundColor: isRejected ? "#E2E8F0" : "#F97316",
+                                color: "#FFFFFF",
+                                cursor: isRejected ? "not-allowed" : "pointer",
+                                opacity: isRejected ? 0.6 : 1
+                              }}
+                            >
+                              <X size={15} />
+                            </button>
+
+                            {/* Delete Permanently Button */}
+                            <button
+                              onClick={() => handleDeleteWord(item.id)}
+                              disabled={actionLoading === item.id}
+                              title="Delete Entry"
+                              style={{
+                                padding: "6px 10px",
+                                borderRadius: "8px",
+                                border: "none",
+                                backgroundColor: "#EF4444",
+                                color: "#FFFFFF",
+                                cursor: "pointer"
+                              }}
+                            >
+                              <Trash2 size={15} />
+                            </button>
+
+                          </div>
+                        </td>
+
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
       </div>
-
-      {/* VIEW DETAILS MODAL */}
-      {isViewModalOpen && selectedWord && (
-        <div style={{
-          position: "fixed",
-          inset: 0,
-          backgroundColor: "rgba(15, 23, 42, 0.4)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          zIndex: 999,
-          padding: "16px"
-        }}>
-          <div style={{
-            backgroundColor: "#FFFFFF",
-            borderRadius: "16px",
-            maxWidth: "450px",
-            width: "100%",
-            padding: "24px",
-            boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1)"
-          }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-              <h3 style={{ margin: 0, fontSize: "18px", fontWeight: "700", color: "#0F172A" }}>
-                Word Details
-              </h3>
-              <button onClick={() => setIsViewModalOpen(false)} style={{ border: "none", background: "none", cursor: "pointer", color: "#64748B" }}>
-                <X size={20} />
-              </button>
-            </div>
-
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px", fontSize: "14px" }}>
-              <div><strong>Kokborok:</strong> {selectedWord.kokborok_word}</div>
-              <div><strong>English:</strong> {selectedWord.english_word}</div>
-              <div><strong>Hindi:</strong> {selectedWord.hindi_word}</div>
-              <div><strong>Bengali:</strong> {selectedWord.bangali_word}</div>
-              <div><strong>Clustering:</strong> {selectedWord.clustering}</div>
-              <div><strong>Status:</strong> {selectedWord.status || "pending"}</div>
-              <div><strong>Submitted By:</strong> {selectedWord.contributor_name || "Anonymous"} ({selectedWord.submitted_by_email || "N/A"})</div>
-            </div>
-
-            <button
-              onClick={() => setIsViewModalOpen(false)}
-              style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "none", backgroundColor: "#2563EB", color: "#FFFFFF", fontWeight: "600", marginTop: "16px", cursor: "pointer" }}
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* EDIT MODAL */}
-      {isEditModalOpen && selectedWord && (
-        <div style={{
-          position: "fixed",
-          inset: 0,
-          backgroundColor: "rgba(15, 23, 42, 0.4)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          zIndex: 999,
-          padding: "16px"
-        }}>
-          <div style={{
-            backgroundColor: "#FFFFFF",
-            borderRadius: "16px",
-            maxWidth: "480px",
-            width: "100%",
-            padding: "24px",
-            boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1)"
-          }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-              <h3 style={{ margin: 0, fontSize: "18px", fontWeight: "700", color: "#0F172A" }}>
-                Admin: Edit Word Details
-              </h3>
-              <button 
-                onClick={() => setIsEditModalOpen(false)}
-                style={{ border: "none", background: "none", cursor: "pointer", color: "#64748B" }}
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveEdit} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-              <div>
-                <label style={{ fontSize: "12px", fontWeight: "600", color: "#475569" }}>Kokborok Word</label>
-                <input
-                  type="text"
-                  value={selectedWord.kokborok_word || ""}
-                  onChange={(e) => setSelectedWord({ ...selectedWord, kokborok_word: e.target.value })}
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #CBD5E1", marginTop: "4px", boxSizing: "border-box" }}
-                  required
-                />
-              </div>
-
-              <div>
-                <label style={{ fontSize: "12px", fontWeight: "600", color: "#475569" }}>English Word</label>
-                <input
-                  type="text"
-                  value={selectedWord.english_word || ""}
-                  onChange={(e) => setSelectedWord({ ...selectedWord, english_word: e.target.value })}
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #CBD5E1", marginTop: "4px", boxSizing: "border-box" }}
-                  required
-                />
-              </div>
-
-              <div>
-                <label style={{ fontSize: "12px", fontWeight: "600", color: "#475569" }}>Hindi Word</label>
-                <input
-                  type="text"
-                  value={selectedWord.hindi_word || ""}
-                  onChange={(e) => setSelectedWord({ ...selectedWord, hindi_word: e.target.value })}
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #CBD5E1", marginTop: "4px", boxSizing: "border-box" }}
-                  required
-                />
-              </div>
-
-              <div>
-                <label style={{ fontSize: "12px", fontWeight: "600", color: "#475569" }}>Bangali Word</label>
-                <input
-                  type="text"
-                  value={selectedWord.bangali_word || ""}
-                  onChange={(e) => setSelectedWord({ ...selectedWord, bangali_word: e.target.value })}
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #CBD5E1", marginTop: "4px", boxSizing: "border-box" }}
-                  required
-                />
-              </div>
-
-              <div>
-                <label style={{ fontSize: "12px", fontWeight: "600", color: "#475569" }}>Clustering Category</label>
-                <select
-                  value={selectedWord.clustering || "Most used"}
-                  onChange={(e) => setSelectedWord({ ...selectedWord, clustering: e.target.value })}
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #CBD5E1", marginTop: "4px", boxSizing: "border-box" }}
-                >
-                  <option value="Most used">Most used</option>
-                  <option value="Average used">Average used</option>
-                  <option value="Rare used">Rare used</option>
-                </select>
-              </div>
-
-              <div style={{ display: "flex", gap: "10px", marginTop: "12px" }}>
-                <button
-                  type="button"
-                  onClick={() => setIsEditModalOpen(false)}
-                  style={{
-                    flex: 1,
-                    padding: "10px",
-                    borderRadius: "8px",
-                    border: "1px solid #CBD5E1",
-                    backgroundColor: "#FFFFFF",
-                    color: "#475569",
-                    fontWeight: "600",
-                    cursor: "pointer"
-                  }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={actionLoading}
-                  style={{
-                    flex: 1,
-                    padding: "10px",
-                    borderRadius: "8px",
-                    border: "none",
-                    backgroundColor: "#2563EB",
-                    color: "#FFFFFF",
-                    fontWeight: "600",
-                    cursor: "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "6px"
-                  }}
-                >
-                  {actionLoading ? <Loader2 size={16} className="animate-spin" /> : "Save Changes"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
