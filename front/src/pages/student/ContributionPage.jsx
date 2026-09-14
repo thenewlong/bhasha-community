@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 // 👤 Profile Modal Import Path
 import StudentProfileModal from "../../components/studentProfileModal";
@@ -16,11 +17,13 @@ import {
   Target,
   X,
   Bell,
-  CheckCircle2
+  CheckCircle2,
+  LogOut
 } from "lucide-react";
 
 export default function ContributionPage() {
   const { currentUser, logout } = useAuth();
+  const navigate = useNavigate();
 
   // Form Fields State
   const [kokborok, setKokborok] = useState("");
@@ -64,6 +67,20 @@ export default function ContributionPage() {
       window.removeEventListener("popstate", handlePopState);
     };
   }, []);
+
+  // -------------------------------------------------------------
+  // 🚪 LOGOUT HANDLER (Direct Redirect to AuthPage)
+  // -------------------------------------------------------------
+  const handleLogout = async () => {
+    try {
+      if (logout) {
+        await logout();
+      }
+      navigate("/auth"); // Seedha AuthPage par back kar dega
+    } catch (err) {
+      setErrorMsg(err.message || "Logout failed. Please try again.");
+    }
+  };
 
   // -------------------------------------------------------------
   // 🔤 SCRIPT VALIDATION HANDLERS (No Roman Script for Hindi & Bengali)
@@ -111,7 +128,7 @@ export default function ContributionPage() {
   }, []);
 
   // -------------------------------------------------------------
-  // 🚀 SUBMIT HANDLER (API ROUTE DRIVEN LOGIC)
+  // 🚀 SUBMIT HANDLER (Moderator + Admin Dashboard Sync Logic)
   // -------------------------------------------------------------
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -133,16 +150,24 @@ export default function ContributionPage() {
     };
 
     try {
-      const response = await fetch("/api/contributions/submit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
+      // 🔄 Dual Fetch: Moderator and Admin Dashboard Both Receive Submitted Word
+      const [modResponse, adminResponse] = await Promise.all([
+        fetch("/api/contributions/submit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        }),
+        fetch("/api/admin/contributions/submit", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        })
+      ]);
 
-      const data = await response.json();
+      const data = await modResponse.json();
 
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to submit word to server.");
+      if (!modResponse.ok) {
+        throw new Error(data.message || "Failed to submit word to moderator server.");
       }
 
       // Trigger Notification on Top Right Bell Icon
@@ -157,7 +182,7 @@ export default function ContributionPage() {
       setBangali("");
 
     } catch (err) {
-      setErrorMsg(err.message || "Something went wrong.");
+      setErrorMsg(err.message || "Something went wrong during submission.");
     } finally {
       setLoading(false);
     }
@@ -267,8 +292,8 @@ export default function ContributionPage() {
             />
           </div>
 
-          {/* 🔔 RIGHT SIDE: NOTIFICATION BELL ICON + PROFILE DP */}
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+          {/* 🔔 RIGHT SIDE: NOTIFICATION BELL, PROFILE DP & LOGOUT BUTTON */}
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             
             {/* Notification Bell Button */}
             <div style={{ position: "relative" }}>
@@ -279,8 +304,8 @@ export default function ContributionPage() {
                   setHasUnread(false);
                 }}
                 style={{
-                  width: "42px",
-                  height: "42px",
+                  width: "40px",
+                  height: "40px",
                   borderRadius: "50%",
                   backgroundColor: "#F4F7F2",
                   border: "1px solid #D5DDD2",
@@ -291,7 +316,7 @@ export default function ContributionPage() {
                   position: "relative"
                 }}
               >
-                <Bell size={20} color="#819A70" className={hasUnread ? "bell-ring-anim" : ""} />
+                <Bell size={19} color="#819A70" className={hasUnread ? "bell-ring-anim" : ""} />
                 
                 {/* Red Dot Badge */}
                 {hasUnread && (
@@ -363,8 +388,8 @@ export default function ContributionPage() {
               onClick={() => setIsProfileOpen(true)}
               title="Student Profile"
               style={{
-                width: "42px",
-                height: "42px",
+                width: "40px",
+                height: "40px",
                 borderRadius: "50%",
                 backgroundColor: "#89ae71",
                 color: "#FFFFFF",
@@ -380,6 +405,27 @@ export default function ContributionPage() {
             >
               {getInitials()}
             </button>
+
+            {/* 🚪 LOGOUT BUTTON (Redirects to AuthPage) */}
+            <button
+              type="button"
+              onClick={handleLogout}
+              title="Logout & Go to Auth Page"
+              style={{
+                width: "40px",
+                height: "40px",
+                borderRadius: "50%",
+                backgroundColor: "#FEF2F2",
+                border: "1px solid #FCA5A5",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                cursor: "pointer"
+              }}
+            >
+              <LogOut size={18} color="#EF4444" />
+            </button>
+
           </div>
         </div>
 
