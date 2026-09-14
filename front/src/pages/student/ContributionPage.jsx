@@ -339,7 +339,7 @@ export default function ContributionPage() {
         </div>
 
         {/* HEADER TITLE SECTION */}
-        <div style={{ textAlign: "center", marginBottom: "20px" }}>
+        <div style={{ textAlign: "center", marginBottom: "24px" }}>
           <h1 style={{ 
             fontSize: "28px", 
             fontWeight: "800", 

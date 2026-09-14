@@ -32,19 +32,25 @@ export default function ModeratorPage() {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
-  // 1. Fetch Words Data from Backend API
+  // 1. Fetch Words Data from Backend API (Read Access)
   const fetchWords = async () => {
     setLoading(true);
     setError("");
     try {
-      const response = await fetch("/api/moderator/pending");
+      const token = localStorage.getItem("authToken");
+      const headers = {
+        "Content-Type": "application/json",
+        ...(token && { Authorization: `Bearer ${token}` })
+      };
+
+      const response = await fetch("/api/moderator/pending", { headers });
       const result = await response.json();
 
       if (response.ok && result.success) {
         setWordsList(result.data || []);
       } else {
         // Fallback for general words endpoint
-        const fallbackRes = await fetch("/api/words");
+        const fallbackRes = await fetch("/api/words", { headers });
         const fallbackResult = await fallbackRes.json();
         if (fallbackRes.ok && fallbackResult.success) {
           setWordsList(fallbackResult.data || []);
@@ -71,35 +77,46 @@ export default function ModeratorPage() {
     return clusterMatch && statusMatch;
   });
 
-  // 2. Moderator Save Edit Action (Updates data and marks/keeps status as pending/submitted for admin review)
+  // 2. Moderator Save Edit Action (Write Access -> Updates PostgreSQL & sends to Admin Queue)
   const handleSaveEdit = async (e) => {
     e.preventDefault();
+    if (!selectedWord) return;
     setActionLoading(true);
 
     try {
-      // Sending updated word with status set to "pending" so it goes to the admin queue
+      const token = localStorage.getItem("authToken");
+      const wordId = selectedWord.id || selectedWord.sno;
+
+      // Sending updated word data so Admin can view the corrected version
       const updatedPayload = {
         ...selectedWord,
-        status: "pending" 
+        status: "pending" // Ensures Admin receives it in the approval queue
       };
 
-      const response = await fetch(`/api/moderator/update/${selectedWord.id}`, {
+      const response = await fetch(`/api/moderator/update/${wordId}`, {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          ...(token && { Authorization: `Bearer ${token}` })
+        },
         body: JSON.stringify(updatedPayload)
       });
 
-      if (response.ok) {
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        // Local State Update
         setWordsList((prev) =>
-          prev.map((item) => (item.id === selectedWord.id ? updatedPayload : item))
+          prev.map((item) => ((item.id || item.sno) === wordId ? updatedPayload : item))
         );
         setIsEditModalOpen(false);
-        alert("Word edited and sent to admin for final approval successfully!");
+        alert("Word edited and sent to Admin for final review successfully!");
       } else {
-        alert("Failed to update word.");
+        alert(result.message || "Failed to update word.");
       }
     } catch (err) {
-      alert("Error updating word.");
+      console.error("Update error:", err);
+      alert("Error updating word. Please check server status.");
     } finally {
       setActionLoading(false);
     }
@@ -330,7 +347,7 @@ export default function ModeratorPage() {
                     {filteredWords.map((row, index) => {
                       const status = (row.status || "pending").toLowerCase();
                       return (
-                        <tr key={row.id || index} style={{ borderBottom: "1px solid #F1F5F9" }}>
+                        <tr key={row.id || row.sno || index} style={{ borderBottom: "1px solid #F1F5F9" }}>
                           <td style={{ padding: "14px 16px", fontSize: "14px", color: "#334155" }}>{index + 1}</td>
                           <td style={{ padding: "14px 16px", fontSize: "14px", fontWeight: "600", color: "#0F172A" }}>{row.kokborok_word}</td>
                           <td style={{ padding: "14px 16px", fontSize: "14px", color: "#334155" }}>{row.english_word}</td>
@@ -355,7 +372,7 @@ export default function ModeratorPage() {
                           <td style={{ padding: "14px 16px" }}>
                             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
                               
-                              {/* View Details Button (Read Access) */}
+                              {/* 1. View Details Button (READ ACCESS) */}
                               <button
                                 title="View Details"
                                 onClick={() => {
@@ -378,7 +395,7 @@ export default function ModeratorPage() {
                                 <Eye size={16} />
                               </button>
 
-                              {/* Edit Button (Write/Edit Access) */}
+                              {/* 2. Edit Button (WRITE ACCESS -> SENDS TO ADMIN) */}
                               <button
                                 title="Edit & Save Word (Sends to Admin)"
                                 onClick={() => {
@@ -415,7 +432,7 @@ export default function ModeratorPage() {
         </main>
       </div>
 
-      {/* VIEW DETAILS MODAL (READ-ONLY) */}
+      {/* VIEW DETAILS MODAL (READ-ONLY ACCESS) */}
       {isViewModalOpen && selectedWord && (
         <div style={{
           position: "fixed",
@@ -464,7 +481,7 @@ export default function ModeratorPage() {
         </div>
       )}
 
-      {/* EDIT & SAVE MODAL (WRITE/EDIT ACCESS -> SENDS TO ADMIN) */}
+      {/* EDIT & SAVE MODAL (WRITE ACCESS -> SENDS TO ADMIN PAGE) */}
       {isEditModalOpen && selectedWord && (
         <div style={{
           position: "fixed",
@@ -536,7 +553,7 @@ export default function ModeratorPage() {
                   type="text"
                   value={selectedWord.bangali_word || ""}
                   onChange={(e) => setSelectedWord({ ...selectedWord, bangali_word: e.target.value })}
-                  style={{ width: "10px", width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #CBD5E1", marginTop: "4px", boxSizing: "border-box" }}
+                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #CBD5E1", marginTop: "4px", boxSizing: "border-box" }}
                   required
                 />
               </div>
