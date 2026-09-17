@@ -4,8 +4,9 @@ import { useNavigate } from "react-router-dom";
 import { db } from "../../firebase/firebase.js";
 import { doc, getDoc } from "firebase/firestore";
 
-// 📷 File Explorer se logo import
+// 📷 Assets se Images aur Video Import
 import logoImg from "../../assets/bhasha-logos.jpeg"; 
+import introVideo from "../../assets/video/welcome.mp4"; // <-- Apni video file yahan assets folder se import karein
 
 import { 
   Mail, 
@@ -38,17 +39,17 @@ export default function AuthPage() {
   const [captchaInput, setCaptchaInput] = useState("");
   const [captchaCode, setCaptchaCode] = useState("");
 
-  // UI & Animation States
+  // UI, Video & Animation States
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [isExiting, setIsExiting] = useState(false);
   const [animateKey, setAnimateKey] = useState(0);
+  const [showVideoOverlay, setShowVideoOverlay] = useState(false); // 🎬 Video State
 
   // -------------------------------------------------------------
   // 📱 MOBILE ZOOM DISABLE & PREVENT PINCH / DOUBLE TAP LOGIC
   // -------------------------------------------------------------
   useEffect(() => {
-    // 1. Dynamic Meta Viewport Injection
     let viewportMeta = document.querySelector('meta[name="viewport"]');
     const originalViewportContent = viewportMeta ? viewportMeta.getAttribute("content") : null;
 
@@ -58,20 +59,17 @@ export default function AuthPage() {
       document.head.appendChild(viewportMeta);
     }
     
-    // Zoom block parameters set karna
     viewportMeta.setAttribute(
       "content",
       "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no"
     );
 
-    // 2. iOS Touch Multi-finger Pinch Zoom Block
     const preventPinchZoom = (e) => {
       if (e.touches && e.touches.length > 1) {
         e.preventDefault();
       }
     };
 
-    // 3. Prevent Double-Tap Zoom in Safari/Webkit
     let lastTouchEnd = 0;
     const preventDoubleTapZoom = (e) => {
       const now = new Date().getTime();
@@ -84,7 +82,6 @@ export default function AuthPage() {
     document.addEventListener("touchstart", preventPinchZoom, { passive: false });
     document.addEventListener("touchend", preventDoubleTapZoom, false);
 
-    // Cleanup Jab User Dusre Page Par Jaye
     return () => {
       if (viewportMeta && originalViewportContent) {
         viewportMeta.setAttribute("content", originalViewportContent);
@@ -110,7 +107,7 @@ export default function AuthPage() {
   const handleModeSwitch = (loginMode) => {
     setError("");
     setIsLogin(loginMode);
-    setAnimateKey((prev) => prev + 1); // Trigger form animation on mode switch
+    setAnimateKey((prev) => prev + 1);
     if (!loginMode) setRole("student");
   };
 
@@ -132,7 +129,13 @@ export default function AuthPage() {
     setIsExiting(true);
     setTimeout(() => {
       navigate(targetPath);
-    }, 450); // Delay for smooth Apple scale-out animation
+    }, 450);
+  };
+
+  // 🎥 Video finish hone par navigation handler
+  const handleVideoEnd = () => {
+    setShowVideoOverlay(false);
+    animateAndNavigate("/contribution");
   };
 
   // Form Submission Logic
@@ -143,7 +146,7 @@ export default function AuthPage() {
 
     try {
       if (isLogin) {
-        // --- 1. STUDENT & FACULTY LOGIN (Email + Password) ---
+        // --- 1. STUDENT & FACULTY LOGIN (No Video - Direct Navigation) ---
         if (role === "student" || role === "faculty") {
           if (!password) {
             setLoading(false);
@@ -152,7 +155,7 @@ export default function AuthPage() {
           await login(email, password);
           animateAndNavigate("/contribution");
 
-        // --- 2. MODERATOR LOGIN (Email Only -> Firestore Check) ---
+        // --- 2. MODERATOR LOGIN ---
         } else if (role === "moderator") {
           if (!email) {
             setLoading(false);
@@ -167,7 +170,7 @@ export default function AuthPage() {
           setRoleSession(email.trim().toLowerCase(), "moderator");
           animateAndNavigate("/moderator");
 
-        // --- 3. ADMIN LOGIN (Email Only -> Firestore Check -> AdminDashboard) ---
+        // --- 3. ADMIN LOGIN ---
         } else if (role === "admin") {
           if (!email) {
             setLoading(false);
@@ -184,14 +187,15 @@ export default function AuthPage() {
         }
 
       } else {
-        // --- 4. STUDENT / FACULTY SIGNUP ---
+        // --- 4. STUDENT / FACULTY SIGNUP (Video Runs First) ---
         if (captchaInput !== captchaCode) {
           setLoading(false);
           return setError("Captcha code does not match!");
         }
 
         await signup(email, password, fullName, role);
-        animateAndNavigate("/contribution");
+        setLoading(false);
+        setShowVideoOverlay(true); // 🎬 Direct redirect karne ke bajaye video play karein
       }
     } catch (err) {
       setError(err.message ? err.message.replace("Firebase:", "").trim() : "Authentication failed.");
@@ -214,6 +218,54 @@ export default function AuthPage() {
         touchAction: "manipulation"
       }}
     >
+      {/* 🎬 FULLSCREEN VIDEO OVERLAY (Signup hone par chalega) */}
+      {showVideoOverlay && (
+        <div style={{
+          position: "fixed",
+          inset: 0,
+          backgroundColor: "#000000",
+          zIndex: 99999,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          flexDirection: "column"
+        }}>
+          <video
+            src={introVideo}
+            autoPlay
+            playsInline
+            onEnded={handleVideoEnd}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover"
+            }}
+          />
+
+          {/* Skip Button */}
+          <button
+            onClick={handleVideoEnd}
+            style={{
+              position: "absolute",
+              top: "24px",
+              right: "24px",
+              backgroundColor: "rgba(0, 0, 0, 0.65)",
+              color: "#FFFFFF",
+              border: "1px solid rgba(255, 255, 255, 0.3)",
+              padding: "10px 20px",
+              borderRadius: "30px",
+              fontSize: "13px",
+              fontWeight: "600",
+              cursor: "pointer",
+              backdropFilter: "blur(8px)",
+              transition: "all 0.2s ease"
+            }}
+          >
+            Skip Intro ✕
+          </button>
+        </div>
+      )}
+
       {/* Dynamic Embedded Animations & Mobile Full Screen CSS */}
       <style>{`
         * {
@@ -267,7 +319,7 @@ export default function AuthPage() {
             justify-content: space-between !important;
           }
           .custom-input, select, input {
-            font-size: 16px !important; /* Prevents iOS Safari auto-zoom */
+            font-size: 16px !important;
           }
           .bottom-graphic {
             margin-left: -20px !important;
@@ -496,7 +548,7 @@ export default function AuthPage() {
               </div>
             </div>
 
-            {/* PASSWORD (Only for Signup OR Student/Faculty Login) */}
+            {/* PASSWORD */}
             {(!isLogin || (isLogin && (role === "student" || role === "faculty"))) && (
               <div className="form-stagger" style={{ animationDelay: isLogin ? "0.15s" : "0.2s" }}>
                 <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#2B3428", marginBottom: "6px" }}>Password</label>

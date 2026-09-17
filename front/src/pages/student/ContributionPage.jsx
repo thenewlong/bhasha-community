@@ -18,7 +18,8 @@ import {
   X,
   Bell,
   CheckCircle2,
-  LogOut
+  LogOut,
+  LogIn
 } from "lucide-react";
 
 export default function ContributionPage() {
@@ -35,9 +36,13 @@ export default function ContributionPage() {
   // Contributor Name state (Auto-filled from User)
   const [contributorName, setContributorName] = useState("");
 
-  // Sync Contributor Name whenever user loads
+  // Sync Contributor Name whenever user loads (Extract username before '@')
   useEffect(() => {
-    const defaultName = currentUser?.displayName || currentUser?.email?.split("@")[0] || "Contributor";
+    const defaultName = 
+      currentUser?.email?.split("@")[0] || 
+      currentUser?.displayName?.split("@")[0] || 
+      "Contributor";
+    
     setContributorName(defaultName);
   }, [currentUser]);
 
@@ -45,6 +50,7 @@ export default function ContributionPage() {
   const [loading, setLoading] = useState(false);
   const [submittedName, setSubmittedName] = useState("");
   const [showNotification, setShowNotification] = useState(false);
+  const [showAuthOptions, setShowAuthOptions] = useState(false);
   const [hasUnread, setHasUnread] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -284,7 +290,7 @@ export default function ContributionPage() {
             />
           </div>
 
-          {/* 🔔 RIGHT SIDE: NOTIFICATION BELL, PROFILE DP & LOGOUT BUTTON */}
+          {/* 🔔 RIGHT SIDE: NOTIFICATION BELL, PROFILE DP & LOGOUT/LOGIN OPTIONS */}
           <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             
             {/* Notification Bell Button */}
@@ -293,6 +299,7 @@ export default function ContributionPage() {
                 type="button"
                 onClick={() => {
                   setShowNotification(!showNotification);
+                  setShowAuthOptions(false);
                   setHasUnread(false);
                 }}
                 style={{
@@ -377,7 +384,10 @@ export default function ContributionPage() {
             {/* 👤 Student Profile Avatar DP */}
             <button
               type="button"
-              onClick={() => setIsProfileOpen(true)}
+              onClick={() => {
+                setIsProfileOpen(true);
+                setShowAuthOptions(false);
+              }}
               title="Student Profile"
               style={{
                 width: "40px",
@@ -398,25 +408,104 @@ export default function ContributionPage() {
               {getInitials()}
             </button>
 
-            {/* 🚪 LOGOUT BUTTON (Redirects to AuthPage) */}
-            <button
-              type="button"
-              onClick={handleLogout}
-              title="Logout & Go to Auth Page"
-              style={{
-                width: "40px",
-                height: "40px",
-                borderRadius: "50%",
-                backgroundColor: "#FEF2F2",
-                border: "1px solid #FCA5A5",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer"
-              }}
-            >
-              <LogOut size={18} color="#EF4444" />
-            </button>
+            {/* 🚪 LOGOUT / LOGIN DOUBLE OPTION BUTTON */}
+            <div style={{ position: "relative" }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAuthOptions(!showAuthOptions);
+                  setShowNotification(false);
+                }}
+                title="Account Options"
+                style={{
+                  width: "40px",
+                  height: "40px",
+                  borderRadius: "50%",
+                  backgroundColor: "#FEF2F2",
+                  border: "1px solid #FCA5A5",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer"
+                }}
+              >
+                <LogOut size={18} color="#EF4444" />
+              </button>
+
+              {/* 🚪 DOUBLE OPTION DROPDOWN MENU (LOGOUT / LOGIN) */}
+              {showAuthOptions && (
+                <div style={{
+                  position: "absolute",
+                  right: "0",
+                  top: "50px",
+                  width: "150px",
+                  backgroundColor: "#FFFFFF",
+                  borderRadius: "16px",
+                  padding: "6px",
+                  boxShadow: "0 10px 30px rgba(0,0,0,0.15)",
+                  border: "1px solid #E1EAD9",
+                  zIndex: 99,
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "4px",
+                  animation: "notificationPop 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards"
+                }}>
+                  {/* Option 1: Logout */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAuthOptions(false);
+                      handleLogout();
+                    }}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      width: "100%",
+                      padding: "8px 12px",
+                      borderRadius: "10px",
+                      border: "none",
+                      backgroundColor: "#FEF2F2",
+                      color: "#EF4444",
+                      fontSize: "12.5px",
+                      fontWeight: "700",
+                      cursor: "pointer",
+                      textAlign: "left"
+                    }}
+                  >
+                    <LogOut size={15} color="#EF4444" />
+                    <span>Logout</span>
+                  </button>
+
+                  {/* Option 2: Login */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAuthOptions(false);
+                      navigate("/auth");
+                    }}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      width: "100%",
+                      padding: "8px 12px",
+                      borderRadius: "10px",
+                      border: "none",
+                      backgroundColor: "#F4F7F2",
+                      color: "#819A70",
+                      fontSize: "12.5px",
+                      fontWeight: "700",
+                      cursor: "pointer",
+                      textAlign: "left"
+                    }}
+                  >
+                    <LogIn size={15} color="#819A70" />
+                    <span>Login</span>
+                  </button>
+                </div>
+              )}
+            </div>
 
           </div>
         </div>

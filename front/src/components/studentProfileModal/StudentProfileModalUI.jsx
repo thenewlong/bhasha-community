@@ -1,347 +1,319 @@
-import React from "react";
-import { X, LogOut, BookOpen, Flame, Activity, Target, ShieldCheck, Sparkles } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { X, User, Mail, Award, BookOpen, LogOut, Check, Edit3 } from "lucide-react";
 
-export default function StudentProfileModalUI({
-  isOpen,
-  onClose,
-  currentUser,
-  userWords,
-  loading,
-  activeTab,
-  setActiveTab,
-  stats,
-  handleLogout,
-}) {
+export default function StudentProfileModal({ isOpen, onClose, currentUser, logout }) {
+  const [studentName, setStudentName] = useState("");
+  const [studentEmail, setStudentEmail] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [savedSuccess, setSavedSuccess] = useState(false);
+
+  // 🔄 AUTO-FILL LOGIC: Email se `@` ke pehle ka part name me set hoga
+  useEffect(() => {
+    if (currentUser) {
+      const email = currentUser?.email || "";
+      const emailPrefix = email.includes("@") ? email.split("@")[0] : email;
+
+      // Priority: Display Name -> Email Prefix -> Fallback 'Student'
+      const autoFilledName = currentUser?.displayName || emailPrefix || "Student";
+
+      setStudentName(autoFilledName);
+      setStudentEmail(email);
+    }
+  }, [currentUser]);
+
   if (!isOpen) return null;
 
-  const displayName = currentUser?.displayName || currentUser?.email?.split("@")[0] || "Contributor";
-  const userEmail = currentUser?.email || "No Email Provided";
-  const userInitial = displayName.charAt(0).toUpperCase();
+  // Initials generator for DP Avatar (e.g. "rahul_dev" -> "RA")
+  const getInitials = (name) => {
+    if (!name) return "ST";
+    const parts = name.trim().split(" ");
+    if (parts.length >= 2) {
+      return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+  };
+
+  const handleSave = (e) => {
+    e.preventDefault();
+    setIsEditing(false);
+    setSavedSuccess(true);
+    setTimeout(() => setSavedSuccess(false), 2500);
+  };
 
   return (
-    <div
-      style={{
-        position: "fixed",
-        inset: 0,
-        backgroundColor: "rgba(18, 26, 17, 0.55)",
-        backdropFilter: "blur(6px)",
-        zIndex: 1000,
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "16px",
-      }}
-      onClick={onClose}
-    >
-      <div
-        style={{
-          width: "100%",
-          maxWidth: "460px",
-          maxHeight: "88vh",
-          backgroundColor: "#FFFFFF",
-          borderRadius: "28px",
-          border: "1px solid #E1EAD9",
-          boxShadow: "0 20px 50px rgba(0,0,0,0.2)",
-          display: "flex",
-          flexDirection: "column",
-          overflow: "hidden",
-          animation: "modalSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards",
-        }}
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div style={{
+      position: "fixed",
+      inset: 0,
+      backgroundColor: "rgba(0, 0, 0, 0.45)",
+      backdropFilter: "blur(4px)",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      zIndex: 1000,
+      padding: "16px"
+    }}>
+      <div style={{
+        backgroundColor: "#FFFFFF",
+        borderRadius: "24px",
+        width: "100%",
+        maxWidth: "420px",
+        padding: "24px",
+        boxShadow: "0 20px 40px rgba(0,0,0,0.15)",
+        border: "1px solid #E1EAD9",
+        position: "relative",
+        animation: "modalPop 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards"
+      }}>
         <style>{`
-          @keyframes modalSlideUp {
-            from { opacity: 0; transform: translateY(20px) scale(0.97); }
-            to { opacity: 1; transform: translateY(0) scale(1); }
+          @keyframes modalPop {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
           }
         `}</style>
 
-        {/* 🔝 MODAL HEADER */}
-        <div
+        {/* ✖️ CLOSE BUTTON */}
+        <button
+          onClick={onClose}
+          type="button"
           style={{
-            padding: "20px 20px 16px 20px",
-            backgroundColor: "#F7F9F6",
-            borderBottom: "1px solid #E8EFE5",
-            position: "relative",
+            position: "absolute",
+            top: "18px",
+            right: "18px",
+            border: "none",
+            background: "#F4F7F2",
+            borderRadius: "50%",
+            width: "32px",
+            height: "32px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            color: "#657563"
           }}
         >
-          <button
-            onClick={onClose}
-            style={{
-              position: "absolute",
-              right: "16px",
-              top: "16px",
-              background: "#EAF0E7",
-              border: "none",
-              borderRadius: "50%",
-              width: "32px",
-              height: "32px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              color: "#556453",
-            }}
-          >
-            <X size={18} />
-          </button>
+          <X size={18} />
+        </button>
 
-          {/* User Info Avatar Banner */}
-          <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
-            <div
-              style={{
-                width: "56px",
-                height: "56px",
-                borderRadius: "50%",
-                backgroundColor: "#819A70",
-                color: "#FFFFFF",
-                fontSize: "22px",
-                fontWeight: "800",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                boxShadow: "0 4px 12px rgba(129, 154, 112, 0.35)",
-              }}
-            >
-              {userInitial}
-            </div>
-            <div>
-              <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                <h3 style={{ fontSize: "18px", fontWeight: "800", color: "#182216", margin: 0 }}>
-                  {displayName}
-                </h3>
-                <ShieldCheck size={16} color="#819A70" />
-              </div>
-              <p style={{ fontSize: "12px", color: "#657563", margin: "2px 0 0 0" }}>{userEmail}</p>
-            </div>
+        {/* 👤 AVATAR & HEADER */}
+        <div style={{ textAlign: "center", marginBottom: "20px" }}>
+          <div style={{
+            width: "72px",
+            height: "72px",
+            borderRadius: "50%",
+            backgroundColor: "#819A70",
+            color: "#FFFFFF",
+            fontSize: "24px",
+            fontWeight: "800",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            margin: "0 auto 12px auto",
+            boxShadow: "0 6px 16px rgba(129, 154, 112, 0.3)",
+            border: "3px solid #E8EFE5"
+          }}>
+            {getInitials(studentName)}
           </div>
-
-          {/* Quick Stats Grid */}
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(3, 1fr)",
-              gap: "8px",
-              marginTop: "16px",
-            }}
-          >
-            <div
-              style={{
-                backgroundColor: "#FFFFFF",
-                padding: "10px",
-                borderRadius: "14px",
-                border: "1px solid #E1EAD9",
-                textAlign: "center",
-              }}
-            >
-              <div style={{ fontSize: "18px", fontWeight: "800", color: "#819A70" }}>
-                {stats.total}
-              </div>
-              <div style={{ fontSize: "10px", fontWeight: "700", color: "#657563" }}>TOTAL WORDS</div>
-            </div>
-            <div
-              style={{
-                backgroundColor: "#FFFFFF",
-                padding: "10px",
-                borderRadius: "14px",
-                border: "1px solid #E1EAD9",
-                textAlign: "center",
-              }}
-            >
-              <div style={{ fontSize: "18px", fontWeight: "800", color: "#E11D48" }}>
-                {stats.mostUsed}
-              </div>
-              <div style={{ fontSize: "10px", fontWeight: "700", color: "#657563" }}>MOST USED</div>
-            </div>
-            <div
-              style={{
-                backgroundColor: "#FFFFFF",
-                padding: "10px",
-                borderRadius: "14px",
-                border: "1px solid #E1EAD9",
-                textAlign: "center",
-              }}
-            >
-              <div style={{ fontSize: "18px", fontWeight: "800", color: "#D97706" }}>
-                {stats.rareUsed}
-              </div>
-              <div style={{ fontSize: "10px", fontWeight: "700", color: "#657563" }}>RARE WORDS</div>
-            </div>
-          </div>
+          <h2 style={{ fontSize: "20px", fontWeight: "800", color: "#182216", margin: "0 0 2px 0" }}>
+            Student Profile
+          </h2>
+          <span style={{ fontSize: "11px", fontWeight: "700", color: "#819A70", letterSpacing: "1px", textTransform: "uppercase" }}>
+            Bhasha Community Member
+          </span>
         </div>
 
-        {/* 📑 TAB NAVIGATION */}
-        <div
-          style={{
+        {/* ✅ SUCCESS TOAST */}
+        {savedSuccess && (
+          <div style={{
+            backgroundColor: "#ECFDF5",
+            color: "#065F46",
+            padding: "8px 12px",
+            borderRadius: "12px",
+            fontSize: "12px",
+            fontWeight: "600",
+            marginBottom: "14px",
             display: "flex",
-            borderBottom: "1px solid #E8EFE5",
-            backgroundColor: "#FFFFFF",
-          }}
-        >
-          <button
-            onClick={() => setActiveTab("words")}
-            style={{
-              flex: 1,
-              padding: "12px",
-              border: "none",
-              background: "none",
-              fontWeight: "700",
-              fontSize: "12.5px",
-              color: activeTab === "words" ? "#819A70" : "#889685",
-              borderBottom: activeTab === "words" ? "2px solid #819A70" : "2px solid transparent",
-              cursor: "pointer",
-            }}
-          >
-            My Contributions ({stats.total})
-          </button>
-        </div>
+            alignItems: "center",
+            gap: "6px",
+            border: "1px solid #A7F3D0"
+          }}>
+            <Check size={16} /> Profile name updated successfully!
+          </div>
+        )}
 
-        {/* 📜 SCROLLABLE BODY LIST */}
-        <div
-          style={{
-            padding: "16px",
-            overflowY: "auto",
-            flex: 1,
-            display: "flex",
-            flexDirection: "column",
-            gap: "10px",
-            backgroundColor: "#FAFBF9",
-          }}
-        >
-          {loading ? (
-            <div style={{ textAlign: "center", padding: "30px 0", color: "#819A70", fontSize: "13px" }}>
-              Fetching submitted words...
-            </div>
-          ) : userWords.length === "0" || userWords.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "40px 10px", color: "#889685" }}>
-              <Sparkles size={32} color="#819A70" style={{ marginBottom: "8px" }} />
-              <p style={{ margin: 0, fontWeight: "700", fontSize: "14px", color: "#182216" }}>
-                No Contributions Yet
-              </p>
-              <p style={{ margin: "4px 0 0 0", fontSize: "12px" }}>
-                Aapne abhi tak koi word submit nahi kiya hai. Form fill karke add karein!
-              </p>
-            </div>
-          ) : (
-            userWords.map((item) => (
-              <div
-                key={item.id}
+        {/* 📝 PROFILE FORM */}
+        <form onSubmit={handleSave} style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+          
+          {/* AUTO-FILLED NAME FIELD */}
+          <div>
+            <label style={{ fontSize: "11px", fontWeight: "800", color: "#182216", display: "block", marginBottom: "6px", letterSpacing: "0.5px" }}>
+              PROFILE NAME
+            </label>
+            <div style={{ position: "relative" }}>
+              <User size={16} color="#819A70" style={{ position: "absolute", left: "12px", top: "12px" }} />
+              <input
+                type="text"
+                value={studentName}
+                onChange={(e) => setStudentName(e.target.value)}
+                disabled={!isEditing}
                 style={{
-                  backgroundColor: "#FFFFFF",
-                  borderRadius: "16px",
-                  padding: "12px 14px",
-                  border: "1px solid #E3E9E1",
-                  boxShadow: "0 2px 6px rgba(0,0,0,0.02)",
+                  width: "100%",
+                  padding: "10px 12px 10px 38px",
+                  borderRadius: "12px",
+                  border: isEditing ? "1.5px solid #819A70" : "1px solid #D5DDD2",
+                  backgroundColor: isEditing ? "#FFFFFF" : "#F8FAF7",
+                  color: "#182216",
+                  fontSize: "13px",
+                  fontWeight: "600",
+                  outline: "none"
+                }}
+              />
+              {!isEditing && (
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(true)}
+                  style={{
+                    position: "absolute",
+                    right: "10px",
+                    top: "10px",
+                    border: "none",
+                    background: "none",
+                    cursor: "pointer",
+                    color: "#819A70"
+                  }}
+                  title="Edit Name"
+                >
+                  <Edit3 size={16} />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* REGISTERED EMAIL FIELD (READ-ONLY) */}
+          <div>
+            <label style={{ fontSize: "11px", fontWeight: "800", color: "#182216", display: "block", marginBottom: "6px", letterSpacing: "0.5px" }}>
+              REGISTERED EMAIL
+            </label>
+            <div style={{ position: "relative" }}>
+              <Mail size={16} color="#819A70" style={{ position: "absolute", left: "12px", top: "12px" }} />
+              <input
+                type="email"
+                value={studentEmail}
+                readOnly
+                style={{
+                  width: "100%",
+                  padding: "10px 12px 10px 38px",
+                  borderRadius: "12px",
+                  border: "1px solid #D5DDD2",
+                  backgroundColor: "#EEF3EC",
+                  color: "#657563",
+                  fontSize: "13px",
+                  fontWeight: "500",
+                  outline: "none",
+                  cursor: "not-allowed"
+                }}
+              />
+            </div>
+          </div>
+
+          {/* STATUS CARDS */}
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            gap: "8px",
+            marginTop: "4px"
+          }}>
+            <div style={{
+              backgroundColor: "#F4F7F2",
+              borderRadius: "14px",
+              padding: "10px",
+              textAlign: "center",
+              border: "1px solid #E1EAD9"
+            }}>
+              <BookOpen size={16} color="#819A70" style={{ marginBottom: "2px" }} />
+              <div style={{ fontSize: "15px", fontWeight: "800", color: "#182216" }}>Active</div>
+              <div style={{ fontSize: "10px", color: "#657563", fontWeight: "600" }}>Account Status</div>
+            </div>
+
+            <div style={{
+              backgroundColor: "#F4F7F2",
+              borderRadius: "14px",
+              padding: "10px",
+              textAlign: "center",
+              border: "1px solid #E1EAD9"
+            }}>
+              <Award size={16} color="#819A70" style={{ marginBottom: "2px" }} />
+              <div style={{ fontSize: "15px", fontWeight: "800", color: "#182216" }}>Contributor</div>
+              <div style={{ fontSize: "10px", color: "#657563", fontWeight: "600" }}>User Role</div>
+            </div>
+          </div>
+
+          {/* ACTION BUTTONS */}
+          <div style={{ display: "flex", gap: "8px", marginTop: "8px" }}>
+            {isEditing ? (
+              <button
+                type="submit"
+                style={{
+                  flex: 1,
+                  backgroundColor: "#819A70",
+                  color: "#FFFFFF",
+                  padding: "12px",
+                  borderRadius: "14px",
+                  border: "none",
+                  fontWeight: "700",
+                  fontSize: "13px",
+                  cursor: "pointer",
+                  boxShadow: "0 4px 12px rgba(129, 154, 112, 0.2)"
                 }}
               >
-                <div
-                  style={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    marginBottom: "8px",
-                  }}
-                >
-                  <span
-                    style={{
-                      fontSize: "15px",
-                      fontWeight: "800",
-                      color: "#182216",
-                      letterSpacing: "-0.2px",
-                    }}
-                  >
-                    {item.kokborok_word}
-                  </span>
-                  <span
-                    style={{
-                      fontSize: "10px",
-                      fontWeight: "800",
-                      padding: "3px 8px",
-                      borderRadius: "20px",
-                      backgroundColor:
-                        item.clustering === "Most used"
-                          ? "#FEE2E2"
-                          : item.clustering === "Average used"
-                          ? "#FEF3C7"
-                          : "#E0E7FF",
-                      color:
-                        item.clustering === "Most used"
-                          ? "#991B1B"
-                          : item.clustering === "Average used"
-                          ? "#92400E"
-                          : "#3730A3",
-                    }}
-                  >
-                    {item.clustering || "Most used"}
-                  </span>
-                </div>
+                Save Changes
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={onClose}
+                style={{
+                  flex: 1,
+                  backgroundColor: "#F4F7F2",
+                  color: "#182216",
+                  padding: "12px",
+                  borderRadius: "14px",
+                  border: "1px solid #D5DDD2",
+                  fontWeight: "700",
+                  fontSize: "13px",
+                  cursor: "pointer"
+                }}
+              >
+                Close
+              </button>
+            )}
 
-                {/* Word Translations Grid */}
-                <div
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "repeat(3, 1fr)",
-                    gap: "6px",
-                    fontSize: "11px",
-                    backgroundColor: "#F7F9F6",
-                    padding: "8px",
-                    borderRadius: "10px",
-                  }}
-                >
-                  <div>
-                    <span style={{ color: "#889685", fontSize: "9px", display: "block" }}>
-                      ENGLISH
-                    </span>
-                    <strong style={{ color: "#182216" }}>{item.english_word || "-"}</strong>
-                  </div>
-                  <div>
-                    <span style={{ color: "#889685", fontSize: "9px", display: "block" }}>
-                      HINDI
-                    </span>
-                    <strong style={{ color: "#182216" }}>{item.hindi_word || "-"}</strong>
-                  </div>
-                  <div>
-                    <span style={{ color: "#889685", fontSize: "9px", display: "block" }}>
-                      BENGALI
-                    </span>
-                    <strong style={{ color: "#182216" }}>{item.bangali_word || "-"}</strong>
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
+            {logout && (
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  logout();
+                }}
+                title="Logout"
+                style={{
+                  padding: "12px 16px",
+                  backgroundColor: "#FEF2F2",
+                  color: "#EF4444",
+                  borderRadius: "14px",
+                  border: "1px solid #FCA5A5",
+                  fontWeight: "700",
+                  fontSize: "13px",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center"
+                }}
+              >
+                <LogOut size={16} />
+              </button>
+            )}
+          </div>
 
-        {/* 🔻 FOOTER LOGOUT BUTTON */}
-        <div
-          style={{
-            padding: "14px 20px",
-            borderTop: "1px solid #E8EFE5",
-            backgroundColor: "#FFFFFF",
-          }}
-        >
-          <button
-            onClick={handleLogout}
-            style={{
-              width: "100%",
-              padding: "10px",
-              borderRadius: "14px",
-              border: "1px solid #FCA5A5",
-              backgroundColor: "#FEF2F2",
-              color: "#DC2626",
-              fontWeight: "700",
-              fontSize: "13px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: "6px",
-              cursor: "pointer",
-            }}
-          >
-            <LogOut size={16} />
-            <span>Sign Out Account</span>
-          </button>
-        </div>
+        </form>
       </div>
     </div>
   );

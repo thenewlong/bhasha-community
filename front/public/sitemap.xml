@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  
+  <!-- 1. Auth Page (Signup / Signin) -->
+  <url>
+    <loc>https://bhasha.letsbharat.com/auth</loc>
+    <lastmod>2026-09-17</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.80</priority>
+  </url>
+
+  <!-- 2. Kokborok Contribution Page -->
+  <url>
+    <loc>https://bhasha.letsbharat.com/contribution</loc>
+    <lastmod>2026-09-17</lastmod>
+    <changefreq>daily</changefreq>
+    <priority>1.00</priority>
+  </url>
+
+</urlset>
