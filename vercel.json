@@ -1,13 +1,13 @@
 {
-  "sion": 2,
+  "version": 2,
   "builds": [
     {
       "src": "backend/src/ser.js",
-      "use": "@cel/node"
+      "use": "@vercel/node"
     },
     {
       "src": "front/package.json",
-      "use": "@cel/static-build",
+      "use": "@vercel/static-build",
       "config": { "distDir": "dist" }
     }
   ],
