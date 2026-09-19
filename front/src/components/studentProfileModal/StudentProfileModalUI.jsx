@@ -286,31 +286,7 @@ export default function StudentProfileModal({ isOpen, onClose, currentUser, logo
               </button>
             )}
 
-            {logout && (
-              <button
-                type="button"
-                onClick={() => {
-                  onClose();
-                  logout();
-                }}
-                title="Logout"
-                style={{
-                  padding: "12px 16px",
-                  backgroundColor: "#FEF2F2",
-                  color: "#EF4444",
-                  borderRadius: "14px",
-                  border: "1px solid #FCA5A5",
-                  fontWeight: "700",
-                  fontSize: "13px",
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center"
-                }}
-              >
-                <LogOut size={16} />
-              </button>
-            )}
+          
           </div>
 
         </form>

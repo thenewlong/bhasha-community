@@ -32,6 +32,9 @@ export default function ModeratorPage() {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
 
+  // Mobile menu toggle state
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
   // 1. Fetch Words Data from Backend API
   const fetchWords = async () => {
     setLoading(true);
@@ -104,44 +107,48 @@ export default function ModeratorPage() {
       
       {/* TOP NAVBAR */}
       <header style={{
-        height: "64px",
+        minHeight: "64px",
         backgroundColor: "#FFFFFF",
         borderBottom: "1px solid #E2E8F0",
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
-        padding: "0 24px"
+        padding: "10px 16px",
+        flexWrap: "wrap",
+        gap: "10px"
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-          <button style={{ border: "none", background: "none", cursor: "pointer", color: "#64748B" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+          <button 
+            onClick={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
+            style={{ border: "none", background: "none", cursor: "pointer", color: "#64748B", padding: "4px" }}
+          >
             <Menu size={22} />
           </button>
+          <h1 style={{ fontSize: "16px", fontWeight: "700", color: "#0F172A", margin: 0, letterSpacing: "-0.3px" }}>
+            Moderator Dashboard
+          </h1>
         </div>
 
-        <h1 style={{ fontSize: "20px", fontWeight: "700", color: "#0F172A", margin: 0, letterSpacing: "-0.3px" }}>
-          Moderator Dashboard
-        </h1>
-
-        <div style={{ display: "flex", alignItems: "center", gap: "16px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", flexWrap: "wrap" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
             <div style={{
-              width: "36px",
-              height: "36px",
+              width: "32px",
+              height: "32px",
               borderRadius: "50%",
               backgroundColor: "#059669",
               display: "flex",
               alignItems: "center",
-              justifyContent: "center"
+              justifyContent: "center",
+              flexShrink: 0
             }}>
-              <ShieldCheck size={20} color="#FFFFFF" />
+              <ShieldCheck size={18} color="#FFFFFF" />
             </div>
-            <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: "13px", fontWeight: "600", color: "#1E293B" }}>
+            <div style={{ textAlign: "right", maxWidth: "140px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              <div style={{ fontSize: "12px", fontWeight: "600", color: "#1E293B", textOverflow: "ellipsis", overflow: "hidden" }}>
                 {currentUser?.email || "moderator@gmail.com"}
               </div>
-              <div style={{ fontSize: "11px", color: "#059669", fontWeight: "600" }}>Moderator</div>
+              <div style={{ fontSize: "10px", color: "#059669", fontWeight: "600" }}>Moderator</div>
             </div>
-            <ChevronDown size={16} color="#64748B" />
           </div>
 
           <button
@@ -150,36 +157,38 @@ export default function ModeratorPage() {
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "6px",
+              gap: "4px",
               backgroundColor: "#FEF2F2",
               color: "#DC2626",
               border: "1px solid #FCA5A5",
-              padding: "6px 12px",
+              padding: "6px 10px",
               borderRadius: "8px",
-              fontSize: "13px",
+              fontSize: "12px",
               fontWeight: "600",
-              cursor: "pointer"
+              cursor: "pointer",
+              flexShrink: 0
             }}
           >
-            <LogOut size={15} />
+            <LogOut size={14} />
             Logout
           </button>
         </div>
       </header>
 
       {/* BODY LAYOUT */}
-      <div style={{ display: "flex", minHeight: "calc(100vh - 64px)" }}>
+      <div style={{ display: "flex", minHeight: "calc(100vh - 64px)", position: "relative" }}>
         
-        {/* LEFT SIDEBAR */}
+        {/* SIDEBAR (Responsive drawer for mobile) */}
         <aside style={{
           width: "64px",
           backgroundColor: "#FFFFFF",
           borderRight: "1px solid #E2E8F0",
-          display: "flex",
+          display: isMobileSidebarOpen ? "flex" : "none",
           flexDirection: "column",
           alignItems: "center",
           paddingTop: "20px",
-          gap: "16px"
+          gap: "16px",
+          zIndex: 10
         }}>
           <button style={{
             width: "42px",
@@ -213,36 +222,38 @@ export default function ModeratorPage() {
         </aside>
 
         {/* MAIN CONTENT AREA */}
-        <main style={{ flex: 1, padding: "28px", maxWidth: "1280px", margin: "0 auto", width: "100%" }}>
+        <main style={{ flex: 1, padding: "16px 12px", maxWidth: "1280px", margin: "0 auto", width: "100%", boxSizing: "border-box" }}>
           
-          {/* WORDS MANAGEMENT TABLE */}
+          {/* WORDS MANAGEMENT TABLE CARD */}
           <div style={{
             backgroundColor: "#FFFFFF",
-            borderRadius: "16px",
+            borderRadius: "12px",
             border: "1px solid #E2E8F0",
-            padding: "24px",
+            padding: "16px 12px",
             boxShadow: "0 1px 3px rgba(0,0,0,0.02)"
           }}>
             
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px", flexWrap: "wrap", gap: "12px" }}>
-              <h2 style={{ fontSize: "18px", fontWeight: "700", color: "#1E293B", margin: 0 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px", flexWrap: "wrap", gap: "10px" }}>
+              <h2 style={{ fontSize: "16px", fontWeight: "700", color: "#1E293B", margin: 0 }}>
                 Content Review & Editing
               </h2>
 
               {/* Status Filter Dropdown */}
-              <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                <Filter size={16} color="#64748B" />
-                <span style={{ fontSize: "13px", fontWeight: "600", color: "#475569" }}>Status:</span>
+              <div style={{ display: "flex", alignItems: "center", gap: "6px", width: "100%", maxWidth: "200px" }}>
+                <Filter size={15} color="#64748B" />
+                <span style={{ fontSize: "12px", fontWeight: "600", color: "#475569" }}>Status:</span>
                 <select
                   value={statusFilter}
                   onChange={(e) => setStatusFilter(e.target.value)}
                   style={{
-                    padding: "6px 12px",
+                    flex: 1,
+                    padding: "6px 8px",
                     borderRadius: "8px",
                     border: "1px solid #CBD5E1",
-                    fontSize: "13px",
+                    fontSize: "12px",
                     fontWeight: "500",
-                    outline: "none"
+                    outline: "none",
+                    backgroundColor: "#FFFFFF"
                   }}
                 >
                   <option value="all">All Status</option>
@@ -253,16 +264,16 @@ export default function ModeratorPage() {
               </div>
             </div>
 
-            {/* CATEGORY TABS */}
+            {/* CATEGORY TABS (Scrollable on mobile) */}
             <div style={{
-              display: "inline-flex",
+              display: "flex",
               backgroundColor: "#F1F5F9",
-              borderRadius: "12px",
+              borderRadius: "10px",
               padding: "4px",
-              marginBottom: "24px",
+              marginBottom: "16px",
               gap: "4px",
-              width: "100%",
-              maxWidth: "600px"
+              overflowX: "auto",
+              WebkitOverflowScrolling: "touch"
             }}>
               {["Most used", "Average used", "Rare used"].map((tab) => {
                 const isActive = activeTab.toLowerCase() === tab.toLowerCase();
@@ -271,17 +282,17 @@ export default function ModeratorPage() {
                     key={tab}
                     onClick={() => setActiveTab(tab)}
                     style={{
-                      flex: 1,
-                      padding: "10px 16px",
-                      borderRadius: "8px",
+                      flex: "1 0 auto",
+                      padding: "8px 12px",
+                      borderRadius: "6px",
                       border: "none",
-                      fontSize: "14px",
+                      fontSize: "12px",
                       fontWeight: isActive ? "600" : "500",
                       backgroundColor: isActive ? "#FFFFFF" : "transparent",
                       color: isActive ? "#059669" : "#64748B",
                       cursor: "pointer",
-                      boxShadow: isActive ? "0 2px 4px rgba(0,0,0,0.04)" : "none",
-                      transition: "all 0.2s ease"
+                      boxShadow: isActive ? "0 1px 3px rgba(0,0,0,0.05)" : "none",
+                      whiteSpace: "nowrap"
                     }}
                   >
                     {tab}
@@ -292,32 +303,32 @@ export default function ModeratorPage() {
 
             {/* TABLE AND LOADING STATES */}
             {loading ? (
-              <div style={{ textAlign: "center", padding: "40px", color: "#64748B" }}>
-                <Loader2 size={28} className="animate-spin" style={{ margin: "0 auto 8px" }} />
-                <p>Loading database records...</p>
+              <div style={{ textAlign: "center", padding: "30px 10px", color: "#64748B" }}>
+                <Loader2 size={24} className="animate-spin" style={{ margin: "0 auto 8px" }} />
+                <p style={{ fontSize: "13px" }}>Loading database records...</p>
               </div>
             ) : error ? (
-              <div style={{ textAlign: "center", padding: "24px", color: "#DC2626", backgroundColor: "#FEF2F2", borderRadius: "8px" }}>
+              <div style={{ textAlign: "center", padding: "16px", color: "#DC2626", backgroundColor: "#FEF2F2", borderRadius: "8px", fontSize: "13px" }}>
                 {error}
               </div>
             ) : filteredWords.length === 0 ? (
-              <div style={{ textAlign: "center", padding: "40px 0", color: "#94A3B8" }}>
+              <div style={{ textAlign: "center", padding: "30px 10px", color: "#94A3B8", fontSize: "13px" }}>
                 No words available in <b>"{activeTab}"</b> category with <b>"{statusFilter}"</b> status.
               </div>
             ) : (
-              /* DATA TABLE */
-              <div style={{ overflowX: "auto" }}>
-                <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left" }}>
+              /* DATA TABLE CONTAINER WITH TOUCH SCROLL */
+              <div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", textAlign: "left", minWidth: "600px" }}>
                   <thead>
                     <tr style={{ backgroundColor: "#F8FAFC", borderBottom: "1px solid #E2E8F0" }}>
-                      <th style={{ padding: "12px 16px", fontSize: "13px", fontWeight: "600", color: "#475569", width: "50px" }}>S.No.</th>
-                      <th style={{ padding: "12px 16px", fontSize: "13px", fontWeight: "600", color: "#475569" }}>Kokborok</th>
-                      <th style={{ padding: "12px 16px", fontSize: "13px", fontWeight: "600", color: "#475569" }}>English</th>
-                      <th style={{ padding: "12px 16px", fontSize: "13px", fontWeight: "600", color: "#475569" }}>Hindi</th>
-                      <th style={{ padding: "12px 16px", fontSize: "13px", fontWeight: "600", color: "#475569" }}>Bangali</th>
-                      <th style={{ padding: "12px 16px", fontSize: "13px", fontWeight: "600", color: "#475569" }}>Submitted By</th>
-                      <th style={{ padding: "12px 16px", fontSize: "13px", fontWeight: "600", color: "#475569", textAlign: "center" }}>Status</th>
-                      <th style={{ padding: "12px 16px", fontSize: "13px", fontWeight: "600", color: "#475569", textAlign: "center", width: "110px" }}>Actions</th>
+                      <th style={{ padding: "10px 12px", fontSize: "12px", fontWeight: "600", color: "#475569", width: "40px" }}>S.No.</th>
+                      <th style={{ padding: "10px 12px", fontSize: "12px", fontWeight: "600", color: "#475569" }}>Kokborok</th>
+                      <th style={{ padding: "10px 12px", fontSize: "12px", fontWeight: "600", color: "#475569" }}>English</th>
+                      <th style={{ padding: "10px 12px", fontSize: "12px", fontWeight: "600", color: "#475569" }}>Hindi</th>
+                      <th style={{ padding: "10px 12px", fontSize: "12px", fontWeight: "600", color: "#475569" }}>Bangali</th>
+                      <th style={{ padding: "10px 12px", fontSize: "12px", fontWeight: "600", color: "#475569" }}>Submitted By</th>
+                      <th style={{ padding: "10px 12px", fontSize: "12px", fontWeight: "600", color: "#475569", textAlign: "center" }}>Status</th>
+                      <th style={{ padding: "10px 12px", fontSize: "12px", fontWeight: "600", color: "#475569", textAlign: "center", width: "90px" }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -325,19 +336,19 @@ export default function ModeratorPage() {
                       const status = (row.status || "pending").toLowerCase();
                       return (
                         <tr key={row.id || index} style={{ borderBottom: "1px solid #F1F5F9" }}>
-                          <td style={{ padding: "14px 16px", fontSize: "14px", color: "#334155" }}>{index + 1}</td>
-                          <td style={{ padding: "14px 16px", fontSize: "14px", fontWeight: "600", color: "#0F172A" }}>{row.kokborok_word}</td>
-                          <td style={{ padding: "14px 16px", fontSize: "14px", color: "#334155" }}>{row.english_word}</td>
-                          <td style={{ padding: "14px 16px", fontSize: "14px", color: "#334155" }}>{row.hindi_word}</td>
-                          <td style={{ padding: "14px 16px", fontSize: "14px", color: "#334155" }}>{row.bangali_word}</td>
-                          <td style={{ padding: "14px 16px", fontSize: "13px", color: "#64748B" }}>
+                          <td style={{ padding: "10px 12px", fontSize: "13px", color: "#334155" }}>{index + 1}</td>
+                          <td style={{ padding: "10px 12px", fontSize: "13px", fontWeight: "600", color: "#0F172A" }}>{row.kokborok_word}</td>
+                          <td style={{ padding: "10px 12px", fontSize: "13px", color: "#334155" }}>{row.english_word}</td>
+                          <td style={{ padding: "10px 12px", fontSize: "13px", color: "#334155" }}>{row.hindi_word}</td>
+                          <td style={{ padding: "10px 12px", fontSize: "13px", color: "#334155" }}>{row.bangali_word}</td>
+                          <td style={{ padding: "10px 12px", fontSize: "12px", color: "#64748B" }}>
                             {row.contributor_name || "Anonymous"}
                           </td>
-                          <td style={{ padding: "14px 16px", textAlign: "center" }}>
+                          <td style={{ padding: "10px 12px", textAlign: "center" }}>
                             <span style={{
-                              padding: "4px 10px",
-                              borderRadius: "12px",
-                              fontSize: "12px",
+                              padding: "2px 8px",
+                              borderRadius: "10px",
+                              fontSize: "11px",
                               fontWeight: "700",
                               textTransform: "capitalize",
                               backgroundColor: status === "approved" ? "#DCFCE7" : status === "rejected" ? "#FEE2E2" : "#FEF3C7",
@@ -346,8 +357,8 @@ export default function ModeratorPage() {
                               {status}
                             </span>
                           </td>
-                          <td style={{ padding: "14px 16px" }}>
-                            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "8px" }}>
+                          <td style={{ padding: "10px 12px" }}>
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
                               
                               {/* View Details Button */}
                               <button
@@ -357,8 +368,8 @@ export default function ModeratorPage() {
                                   setIsViewModalOpen(true);
                                 }}
                                 style={{
-                                  width: "32px",
-                                  height: "32px",
+                                  width: "30px",
+                                  height: "30px",
                                   borderRadius: "50%",
                                   backgroundColor: "#EFF6FF",
                                   border: "none",
@@ -369,7 +380,7 @@ export default function ModeratorPage() {
                                   cursor: "pointer"
                                 }}
                               >
-                                <Eye size={16} />
+                                <Eye size={15} />
                               </button>
 
                               {/* Edit Button */}
@@ -380,8 +391,8 @@ export default function ModeratorPage() {
                                   setIsEditModalOpen(true);
                                 }}
                                 style={{
-                                  width: "32px",
-                                  height: "32px",
+                                  width: "30px",
+                                  height: "30px",
                                   borderRadius: "50%",
                                   backgroundColor: "#FFFBEB",
                                   border: "none",
@@ -392,7 +403,7 @@ export default function ModeratorPage() {
                                   cursor: "pointer"
                                 }}
                               >
-                                <Pencil size={16} />
+                                <Pencil size={15} />
                               </button>
 
                             </div>
@@ -409,7 +420,7 @@ export default function ModeratorPage() {
         </main>
       </div>
 
-      {/* VIEW DETAILS MODAL */}
+      {/* VIEW DETAILS MODAL (MOBILE SCREEN FIX) */}
       {isViewModalOpen && selectedWord && (
         <div style={{
           position: "fixed",
@@ -426,19 +437,22 @@ export default function ModeratorPage() {
             borderRadius: "16px",
             maxWidth: "450px",
             width: "100%",
-            padding: "24px",
-            boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1)"
+            maxHeight: "90vh",
+            overflowY: "auto",
+            padding: "20px",
+            boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1)",
+            boxSizing: "border-box"
           }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-              <h3 style={{ margin: 0, fontSize: "18px", fontWeight: "700", color: "#0F172A" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
+              <h3 style={{ margin: 0, fontSize: "16px", fontWeight: "700", color: "#0F172A" }}>
                 Word Details
               </h3>
-              <button onClick={() => setIsViewModalOpen(false)} style={{ border: "none", background: "none", cursor: "pointer", color: "#64748B" }}>
-                <X size={20} />
+              <button onClick={() => setIsViewModalOpen(false)} style={{ border: "none", background: "none", cursor: "pointer", color: "#64748B", padding: "4px" }}>
+                <X size={18} />
               </button>
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "10px", fontSize: "14px" }}>
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px", fontSize: "13px" }}>
               <div><strong>Kokborok:</strong> {selectedWord.kokborok_word}</div>
               <div><strong>English:</strong> {selectedWord.english_word}</div>
               <div><strong>Hindi:</strong> {selectedWord.hindi_word}</div>
@@ -450,7 +464,7 @@ export default function ModeratorPage() {
 
             <button
               onClick={() => setIsViewModalOpen(false)}
-              style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "none", backgroundColor: "#059669", color: "#FFFFFF", fontWeight: "600", marginTop: "16px", cursor: "pointer" }}
+              style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "none", backgroundColor: "#059669", color: "#FFFFFF", fontWeight: "600", marginTop: "16px", cursor: "pointer", fontSize: "13px" }}
             >
               Close
             </button>
@@ -458,7 +472,7 @@ export default function ModeratorPage() {
         </div>
       )}
 
-      {/* EDIT & SAVE MODAL */}
+      {/* EDIT & SAVE MODAL (MOBILE SCREEN FIX) */}
       {isEditModalOpen && selectedWord && (
         <div style={{
           position: "fixed",
@@ -475,29 +489,32 @@ export default function ModeratorPage() {
             borderRadius: "16px",
             maxWidth: "480px",
             width: "100%",
-            padding: "24px",
-            boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1)"
+            maxHeight: "90vh",
+            overflowY: "auto",
+            padding: "20px",
+            boxShadow: "0 20px 25px -5px rgba(0,0,0,0.1)",
+            boxSizing: "border-box"
           }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-              <h3 style={{ margin: 0, fontSize: "18px", fontWeight: "700", color: "#0F172A" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
+              <h3 style={{ margin: 0, fontSize: "16px", fontWeight: "700", color: "#0F172A" }}>
                 Edit & Save Word Details
               </h3>
               <button 
                 onClick={() => setIsEditModalOpen(false)}
-                style={{ border: "none", background: "none", cursor: "pointer", color: "#64748B" }}
+                style={{ border: "none", background: "none", cursor: "pointer", color: "#64748B", padding: "4px" }}
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
 
-            <form onSubmit={handleSaveEdit} style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+            <form onSubmit={handleSaveEdit} style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
               <div>
                 <label style={{ fontSize: "12px", fontWeight: "600", color: "#475569" }}>Kokborok Word</label>
                 <input
                   type="text"
                   value={selectedWord.kokborok_word || ""}
                   onChange={(e) => setSelectedWord({ ...selectedWord, kokborok_word: e.target.value })}
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #CBD5E1", marginTop: "4px", boxSizing: "border-box" }}
+                  style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid #CBD5E1", marginTop: "4px", boxSizing: "border-box", fontSize: "13px" }}
                   required
                 />
               </div>
@@ -508,7 +525,7 @@ export default function ModeratorPage() {
                   type="text"
                   value={selectedWord.english_word || ""}
                   onChange={(e) => setSelectedWord({ ...selectedWord, english_word: e.target.value })}
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #CBD5E1", marginTop: "4px", boxSizing: "border-box" }}
+                  style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid #CBD5E1", marginTop: "4px", boxSizing: "border-box", fontSize: "13px" }}
                   required
                 />
               </div>
@@ -519,7 +536,7 @@ export default function ModeratorPage() {
                   type="text"
                   value={selectedWord.hindi_word || ""}
                   onChange={(e) => setSelectedWord({ ...selectedWord, hindi_word: e.target.value })}
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #CBD5E1", marginTop: "4px", boxSizing: "border-box" }}
+                  style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid #CBD5E1", marginTop: "4px", boxSizing: "border-box", fontSize: "13px" }}
                   required
                 />
               </div>
@@ -530,7 +547,7 @@ export default function ModeratorPage() {
                   type="text"
                   value={selectedWord.bangali_word || ""}
                   onChange={(e) => setSelectedWord({ ...selectedWord, bangali_word: e.target.value })}
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #CBD5E1", marginTop: "4px", boxSizing: "border-box" }}
+                  style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid #CBD5E1", marginTop: "4px", boxSizing: "border-box", fontSize: "13px" }}
                   required
                 />
               </div>
@@ -540,7 +557,7 @@ export default function ModeratorPage() {
                 <select
                   value={selectedWord.clustering || "Most used"}
                   onChange={(e) => setSelectedWord({ ...selectedWord, clustering: e.target.value })}
-                  style={{ width: "100%", padding: "8px 12px", borderRadius: "8px", border: "1px solid #CBD5E1", marginTop: "4px", boxSizing: "border-box", backgroundColor: "#FFFFFF" }}
+                  style={{ width: "100%", padding: "8px 10px", borderRadius: "8px", border: "1px solid #CBD5E1", marginTop: "4px", boxSizing: "border-box", backgroundColor: "#FFFFFF", fontSize: "13px" }}
                 >
                   <option value="Most used">Most used</option>
                   <option value="Average used">Average used</option>
@@ -548,7 +565,7 @@ export default function ModeratorPage() {
                 </select>
               </div>
 
-              <div style={{ display: "flex", gap: "10px", marginTop: "12px" }}>
+              <div style={{ display: "flex", gap: "8px", marginTop: "10px" }}>
                 <button
                   type="button"
                   onClick={() => setIsEditModalOpen(false)}
@@ -560,7 +577,8 @@ export default function ModeratorPage() {
                     backgroundColor: "#FFFFFF",
                     color: "#475569",
                     fontWeight: "600",
-                    cursor: "pointer"
+                    cursor: "pointer",
+                    fontSize: "13px"
                   }}
                 >
                   Cancel
@@ -580,7 +598,8 @@ export default function ModeratorPage() {
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    gap: "6px"
+                    gap: "6px",
+                    fontSize: "13px"
                   }}
                 >
                   {actionLoading ? <Loader2 size={16} className="animate-spin" /> : "Save Changes"}
