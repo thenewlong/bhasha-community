@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useAuth } from "../../context/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { db } from "../../firebase/firebase.js";
@@ -45,6 +45,19 @@ export default function AuthPage() {
   const [isExiting, setIsExiting] = useState(false);
   const [animateKey, setAnimateKey] = useState(0);
   const [showVideoOverlay, setShowVideoOverlay] = useState(false); // 🎬 Video State
+
+  // Refs for custom typing animation scroll sync
+  const nameInputRef = useRef(null);
+  const nameOverlayRef = useRef(null);
+  const emailInputRef = useRef(null);
+  const emailOverlayRef = useRef(null);
+
+  // Sync scroll between hidden input and visible animated overlay
+  const handleScroll = (inputRef, overlayRef) => {
+    if (inputRef.current && overlayRef.current) {
+      overlayRef.current.scrollLeft = inputRef.current.scrollLeft;
+    }
+  };
 
   // -------------------------------------------------------------
   // 📱 MOBILE ZOOM DISABLE & PREVENT PINCH / DOUBLE TAP LOGIC
@@ -203,6 +216,19 @@ export default function AuthPage() {
     }
   };
 
+  // 💫 HELPER FUNCTION: Letter-by-letter animation render karne ke liye
+  const renderAnimatedText = (text, delayOffset = 0) => {
+    return text.split("").map((char, index) => (
+      <span
+        key={index}
+        className="animate-letter"
+        style={{ animationDelay: `${delayOffset + index * 0.03}s` }}
+      >
+        {char === " " ? "\u00A0" : char}
+      </span>
+    ));
+  };
+
   return (
     <div 
       className="auth-container"
@@ -268,6 +294,29 @@ export default function AuthPage() {
 
       {/* Dynamic Embedded Animations & Mobile Full Screen CSS */}
       <style>{`
+        /* Custom CSS for Static Heading Letter Animation */
+        @keyframes popIn {
+          0% { opacity: 0; transform: scale(0.5) translateY(5px); }
+          50% { transform: scale(1.1) translateY(-2px); }
+          100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .animate-letter {
+          display: inline-block;
+          animation: popIn 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+          opacity: 0; 
+        }
+
+        /* 🟢 NEW: Typing Animation for Input Fields */
+        @keyframes typePop {
+          0% { opacity: 0; transform: scale(0.5) translateY(4px); }
+          50% { transform: scale(1.1) translateY(-1px); }
+          100% { opacity: 1; transform: scale(1) translateY(0); }
+        }
+        .type-letter {
+          display: inline-block;
+          animation: typePop 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
         * {
           touch-action: manipulation;
         }
@@ -289,6 +338,8 @@ export default function AuthPage() {
         .form-stagger {
           animation: inputStagger 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
+        
+        /* Default Custom Input Class */
         .custom-input {
           transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
         }
@@ -296,6 +347,29 @@ export default function AuthPage() {
           border-color: #5E7053 !important;
           box-shadow: 0 0 0 4px rgba(94, 112, 83, 0.15) !important;
           background-color: #FFFFFF !important;
+        }
+
+        /* 🟢 NEW: Custom Container for Animated Inputs */
+        .custom-input-container {
+          transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+          background-color: #FFFFFF;
+          border: 1px solid #E1E7DC;
+          border-radius: 16px;
+          position: relative;
+          box-sizing: border-box;
+        }
+        .custom-input-container:focus-within {
+          border-color: #5E7053 !important;
+          box-shadow: 0 0 0 4px rgba(94, 112, 83, 0.15) !important;
+        }
+
+        /* 🟢 NEW: Prevent Browser Autofill from breaking transparent text */
+        .transparent-input:-webkit-autofill,
+        .transparent-input:-webkit-autofill:hover, 
+        .transparent-input:-webkit-autofill:focus, 
+        .transparent-input:-webkit-autofill:active {
+          -webkit-text-fill-color: transparent !important;
+          transition: background-color 5000s ease-in-out 0s;
         }
 
         /* 📱 MOBILE FULL SCREEN OVERRIDES */
@@ -402,9 +476,19 @@ export default function AuthPage() {
           <div key={`head-${animateKey}`} className="form-stagger">
             <h2 style={{ fontSize: "26px", fontWeight: "700", color: "#232A20", textAlign: "left", margin: "0 0 6px 0", letterSpacing: "-0.5px" }}>
               {isLogin ? (
-                <>Welcome <span style={{ color: "#5E7053" }}>Back</span></>
+                <>
+                  {renderAnimatedText("Welcome ")}
+                  <span style={{ color: "#5E7053" }}>
+                    {renderAnimatedText("Back", 0.24)}
+                  </span>
+                </>
               ) : (
-                <>Create Your <span style={{ color: "#5E7053" }}>Account</span></>
+                <>
+                  {renderAnimatedText("Create Your ")}
+                  <span style={{ color: "#5E7053" }}>
+                    {renderAnimatedText("Account", 0.36)}
+                  </span>
+                </>
               )}
             </h2>
             <p style={{ color: "#6A7764", textAlign: "left", fontSize: "13.5px", margin: "0 0 24px 0", fontWeight: "400", lineHeight: "1.4" }}>
@@ -492,59 +576,83 @@ export default function AuthPage() {
               </div>
             </div>
 
-            {/* FULL NAME (Signup Only) */}
+            {/* FULL NAME (Signup Only) - ✨ Animated Typing */}
             {!isLogin && (
               <div className="form-stagger" style={{ animationDelay: "0.1s" }}>
                 <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#2B3428", marginBottom: "6px" }}>Full Name</label>
-                <div style={{ position: "relative" }}>
+                <div className="custom-input-container">
+                  <User size={19} color="#788871" style={{ position: "absolute", left: "15px", top: "15px", zIndex: 3 }} />
+                  
+                  {/* Fake Text Overlay for Animation */}
+                  <div 
+                    ref={nameOverlayRef}
+                    style={{
+                      position: "absolute", left: "44px", right: "14px", top: "0", bottom: "0",
+                      display: "flex", alignItems: "center", pointerEvents: "none",
+                      fontSize: "14px", color: "#2B3428", overflowX: "hidden", zIndex: 1, whiteSpace: "pre"
+                    }}
+                  >
+                    {!fullName && <span style={{ color: "#9CA3AF" }}>Enter your full name</span>}
+                    {fullName.split("").map((char, i) => (
+                      <span key={i} className="type-letter">{char === " " ? "\u00A0" : char}</span>
+                    ))}
+                  </div>
+
+                  {/* Real Transparent Input */}
                   <input
+                    ref={nameInputRef}
                     type="text"
                     required
-                    placeholder="Enter your full name"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    className="custom-input"
+                    onScroll={() => handleScroll(nameInputRef, nameOverlayRef)}
+                    className="transparent-input"
                     style={{
-                      width: "100%",
-                      backgroundColor: "#FFFFFF",
-                      border: "1px solid #E1E7DC",
-                      borderRadius: "16px",
-                      padding: "14px 14px 14px 44px",
-                      fontSize: "14px",
-                      outline: "none",
-                      boxSizing: "border-box",
-                      color: "#2B3428"
+                      width: "100%", padding: "14px 14px 14px 44px", fontSize: "14px",
+                      outline: "none", border: "none", background: "transparent",
+                      color: "transparent", caretColor: "#2B3428", position: "relative", zIndex: 2, boxSizing: "border-box"
                     }}
                   />
-                  <User size={19} color="#788871" style={{ position: "absolute", left: "15px", top: "15px" }} />
                 </div>
               </div>
             )}
 
-            {/* EMAIL ADDRESS */}
+            {/* EMAIL ADDRESS - ✨ Animated Typing */}
             <div className="form-stagger" style={{ animationDelay: isLogin ? "0.1s" : "0.15s" }}>
               <label style={{ display: "block", fontSize: "13px", fontWeight: "600", color: "#2B3428", marginBottom: "6px" }}>Email Address</label>
-              <div style={{ position: "relative" }}>
+              <div className="custom-input-container">
+                <Mail size={19} color="#788871" style={{ position: "absolute", left: "15px", top: "15px", zIndex: 3 }} />
+                
+                {/* Fake Text Overlay for Animation */}
+                <div 
+                  ref={emailOverlayRef}
+                  style={{
+                    position: "absolute", left: "44px", right: "14px", top: "0", bottom: "0",
+                    display: "flex", alignItems: "center", pointerEvents: "none",
+                    fontSize: "14px", color: "#2B3428", overflowX: "hidden", zIndex: 1, whiteSpace: "pre"
+                  }}
+                >
+                  {!email && <span style={{ color: "#9CA3AF" }}>Enter your email address</span>}
+                  {email.split("").map((char, i) => (
+                    <span key={i} className="type-letter">{char === " " ? "\u00A0" : char}</span>
+                  ))}
+                </div>
+
+                {/* Real Transparent Input */}
                 <input
+                  ref={emailInputRef}
                   type="email"
                   required
-                  placeholder="Enter your email address"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="custom-input"
+                  onScroll={() => handleScroll(emailInputRef, emailOverlayRef)}
+                  className="transparent-input"
                   style={{
-                    width: "100%",
-                    backgroundColor: "#FFFFFF",
-                    border: "1px solid #E1E7DC",
-                    borderRadius: "16px",
-                    padding: "14px 14px 14px 44px",
-                    fontSize: "14px",
-                    outline: "none",
-                    boxSizing: "border-box",
-                    color: "#2B3428"
+                    width: "100%", padding: "14px 14px 14px 44px", fontSize: "14px",
+                    outline: "none", border: "none", background: "transparent",
+                    color: "transparent", caretColor: "#2B3428", position: "relative", zIndex: 2, boxSizing: "border-box"
                   }}
                 />
-                <Mail size={19} color="#788871" style={{ position: "absolute", left: "15px", top: "15px" }} />
               </div>
             </div>
 
