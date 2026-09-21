@@ -6,7 +6,7 @@ import { doc, getDoc } from "firebase/firestore";
 
 // 📷 Assets se Images aur Video Import
 import logoImg from "../../assets/bhasha-logos.jpeg"; 
-import introVideo from "../../assets/video/welcome.mp4"; // <-- Apni video file yahan assets folder se import karein
+import introVideo from "../../assets/video/welcome1.mp4"; // <-- Apni video file yahan assets folder se import karein
 
 import { 
   Mail, 
