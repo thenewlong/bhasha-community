@@ -32,7 +32,7 @@ exports.submitContribution = async (req, res) => {
     if (duplicateCheck.rows.length > 0) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Ye Kokborok word pehle se database me submitted hai! Duplicate entry not allowed.' 
+        message: 'this word is already submitted.' 
       });
     }
 
